@@ -17,14 +17,16 @@ class UserAdmin(BaseUserAdmin):
         'department',
         'is_staff',
         'is_superuser',
-        'get_groups'
+        'get_groups',
+        'events_created_count',
+        'events_responsible_count',
     )
 
     list_filter = (
         'department',
         'is_staff',
         'is_superuser',
-        'groups'
+        'groups',
     )
 
     search_fields = (
@@ -38,6 +40,19 @@ class UserAdmin(BaseUserAdmin):
     autocomplete_fields = (
         'department',
     )
+
+    readonly_fields = (
+        'last_login',
+        'date_joined',
+    )
+
+    def events_created_count(self, obj):
+        return obj.events_created.count()
+    events_created_count.short_description = "Создал мероприятий"
+
+    def events_responsible_count(self, obj):
+        return obj.events_responsible.count()
+    events_responsible_count.short_description = "Ответственный в"
 
     def get_groups(self, obj):
         return ", ".join(

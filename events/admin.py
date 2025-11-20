@@ -12,16 +12,17 @@ class EventAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'title',
-        'status',
+        'colored_status',
         'date_start',
         'date_end',
         'category',
         'department',
         'responsible',
+        'locations_display',
+        'is_published',
+        'created_by_display',
         'created_at',
         'updated_at',
-        'is_published',
-        'created_by_display'
     )
 
     list_filter = (
@@ -29,57 +30,100 @@ class EventAdmin(admin.ModelAdmin):
         'category',
         'department',
         'date_start',
-        'is_published'
+        'is_published',
+        'locations',
     )
 
     search_fields = (
         'title',
-        'description'
+        'description',
+        'category__name',
+        'department__name',
+        'responsible__username',
     )
 
     filter_horizontal = (
         'participants',
+        'locations',
     )
 
     list_editable = (
-        'status',
+        # 'status',
     )
 
-
-
-    # Быстрые действия
+    readonly_fields = (
+        'created_at',
+        'updated_at',
+        'created_by',
+    )
 
     actions = [
         "mark_as_completed",
         "mark_as_cancelled",
         "mark_as_planned",
+        "mark_as_published",
+        "mark_as_unpublished",
         "export_to_excel",
     ]
 
 
-    # Изменение статуса мероприятия
+
+    # ---------- БЫСТРЫЕ ДЕЙСТВИЯ СО СТАТУСОМ ----------
+
     def mark_as_completed(self, request, queryset):
         queryset.update(status='completed')
-        self.message_user(request, 'Выбранные мероприятия отмечены как завершенные ✅')
+        self.message_user(request, 'Выбранные мероприятия отмечены как завершенные')
     mark_as_completed.short_description = 'Отметить как завершенные'
 
     def mark_as_cancelled(self, request, queryset):
         queryset.update(status='cancelled')
-        self.message_user(request, 'Выбранные мероприятия отмечены как отмененные ❌')
+        self.message_user(request, 'Выбранные мероприятия отмечены как отмененные')
     mark_as_cancelled.short_description = 'Отметить как отмененные'
 
     def mark_as_planned(self, request, queryset):
         queryset.update(status='planned')
-        self.message_user(request, 'Выбранные мероприятия снова запланированы 🔄')
-
+        self.message_user(request, 'Выбранные мероприятия снова запланированы')
     mark_as_planned.short_description = 'Отметить как запланированные'
 
-    autocomplete_fields = (
-        'responsible',
-        'participants',
-        'category',
-        'department'
-    )
+
+
+    # ---------- БЫСТРЫЕ ДЕЙСТВИЯ ПО ПУБЛИКАЦИИ ----------
+    def mark_as_published(self, request, queryset):
+        queryset.update(is_published=True)
+        self.message_user(request, 'Выбранные мероприятия отмечены как опубликованные')
+    mark_as_published.short_description = 'Опубликовать выбранные'
+
+    def mark_as_unpublished(self, request, queryset):
+        queryset.update(is_published=False)
+        self.message_user(request, 'Выбранные мероприятия сняты с публикации')
+    mark_as_unpublished.short_description = 'Снять с публикации'
+
+
+
+    # ---------- АВТОПОДСТАНОВКА СОЗДАТЕЛЯ ----------
+    def save_model(self, request, obj, form, change):
+        if not change and not obj.created_by:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+
+
+    # ---------- ОТОБРАЖЕНИЕ ПОЛЕЙ ДЛЯ СПИСКА ----------
+
+    def created_by_display(self, obj):
+        return obj.created_by.username if obj.created_by else "—"
+    created_by_display.short_description = "Создатель"
+
+    def locations_display(self, obj):
+        locations = obj.locations.all()
+        if not locations:
+            return "—"
+        return ", ".join([loc.name for loc in locations])
+    locations_display.short_description = "Места проведения"
+
+
+
+    # ---------- ЦВЕТНОЙ СТАТУС В СПИСКЕ ----------
 
     def colored_status(self, obj):
         colors = {
@@ -94,12 +138,11 @@ class EventAdmin(admin.ModelAdmin):
             color,
             obj.get_status_display()
         )
-
     colored_status.short_description = 'Статус'
 
 
 
-    # Экспорт отчетов (пока только Excel)
+    # ---------- ЭКСПОРТ В EXCEL ----------
 
     def export_to_excel(self, request, queryset):
         workbook = openpyxl.Workbook()
@@ -115,12 +158,16 @@ class EventAdmin(admin.ModelAdmin):
             'Категория',
             'Подразделение',
             'Ответственный',
-            'Участники'
+            'Участники',
+            'Места проведения',
+            'Опубликовано',
+            'Создатель',
         ]
         worksheet.append(headers)
 
         for event in queryset:
             participants = ", ".join([str(u) for u in event.participants.all()])
+            locations = ", ".join([str(l) for l in event.locations.all()])
             worksheet.append([
                 event.id,
                 event.title,
@@ -131,9 +178,11 @@ class EventAdmin(admin.ModelAdmin):
                 event.department.name if event.department else '',
                 event.responsible.username if event.responsible else '',
                 participants,
+                locations,
+                'Да' if event.is_published else 'Нет',
+                event.created_by.username if event.created_by else '',
             ])
 
-        # Сохранение в поток
         output = BytesIO()
         workbook.save(output)
         output.seek(0)
@@ -144,17 +193,5 @@ class EventAdmin(admin.ModelAdmin):
         )
         response['Content-Disposition'] = 'attachment; filename="events_export.xlsx"'
         return response
+
     export_to_excel.short_description = 'Экспортировать в Excel'
-
-
-    # Отображение создателя записи (мероприятия)
-    def created_by_display(self, obj):
-        return obj.created_by.username if obj.created_by else "Не указан"
-    created_by_display.short_description = "Создатель записи"
-
-
-    # Отображение мест проведения
-    def locations_display(self, obj):
-        return ", ".join([location.name for location in obj.locations.all()])
-    locations_display.short_description = "Места проведения"
-

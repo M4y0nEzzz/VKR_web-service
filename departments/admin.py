@@ -6,12 +6,19 @@ from .models import Department
 class DepartmentAdmin(admin.ModelAdmin):
 
     list_display = (
-        'id',
-        'name',
-        'description'
-        )
+        "name",
+        "users_count",
+        "events_count",
+    )
 
     search_fields = (
-        'name',
-        'description'
+        "name",
     )
+
+    def users_count(self, obj):
+        return obj.user_set.count()
+    users_count.short_description = "Пользователи"
+
+    def events_count(self, obj):
+        return obj.event_set.count()
+    events_count.short_description = "Мероприятия"

@@ -6,11 +6,14 @@ from .models import Category
 class CategoryAdmin(admin.ModelAdmin):
 
     list_display = (
-        'id',
-        'name',
-        'color'
+        "name",
+        "events_count",
     )
 
     search_fields = (
-        'name',
+        "name",
     )
+
+    def events_count(self, obj):
+        return obj.event_set.count()
+    events_count.short_description = "Количество мероприятий"
