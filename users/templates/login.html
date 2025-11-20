@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Вход</title>
+</head>
+<body>
+<h1>Вход</h1>
+
+{% if messages %}
+  <ul>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+
+    <label for="id_username">Имя пользователя:</label>
+    <input type="text" id="id_username" name="username">
+
+    <br><br>
+
+    <label for="id_password">Пароль:</label>
+    <input type="password" id="id_password" name="password">
+
+    <br><br>
+
+    <button type="submit">Войти</button>
+</form>
+
+</body>
+</html>
