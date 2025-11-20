@@ -7,20 +7,26 @@ def home(request):
     return render(request, "home.html")
 
 
-# ВНИМАНИЕ !!!
-# Авторизация через LDAP реализована через заглушку.
-# Используется псевдо-авторизация через стандартную форму Django.
-# Выводимое сообщение об успешной авторизации не имеет смысла.
 def ldap_login(request):
     if request.method == "POST":
-        username = request.POST["username"]
-        password = request.POST["password"]
+        username = request.POST.get("username", "").strip()
+        password = request.POST.get("password", "")
+
+        if not username or not password:
+            messages.error(request, "Введите имя пользователя и пароль.")
+            return render(request, "login.html")
 
         user = authenticate(request, username=username, password=password)
+
         if user is not None:
             login(request, user)
-            messages.success(request, "Вы успешно вошли. Данные синхронизированы с LDAP.")
-            return redirect('home')
+            messages.success(
+                request,
+                "Вы успешно вошли. Данные синхронизированы с LDAP (заглушка)."
+            )
+            return redirect("home")
         else:
             messages.error(request, "Неверное имя пользователя или пароль.")
+            return render(request, "login.html")
+
     return render(request, "login.html")
