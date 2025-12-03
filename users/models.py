@@ -20,9 +20,9 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.department})" if self.department else self.username
 
-    # Назначение группы безопасности
     def save(self, *args, **kwargs):
-        if not self.pk:
-            group, created = Group.objects.get_or_create(name='user')
-            self.groups.add(group)
+        is_new = self.pk is None
         super().save(*args, **kwargs)
+        if is_new:
+            group, _ = Group.objects.get_or_create(name='user')
+            self.groups.add(group)
