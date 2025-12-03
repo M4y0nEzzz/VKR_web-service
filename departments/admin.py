@@ -1,103 +1,65 @@
-# departments/admin.py
 from django.contrib import admin
-from django.urls import reverse
 from django.utils.html import format_html
-from django.utils.text import Truncator
-
+from django.utils.formats import date_format
+from django import forms
 from .models import Department
+
+
+class DepartmentForm(forms.ModelForm):
+    class Meta:
+        model = Department
+        fields = "__all__"
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'mc-input', 'placeholder': 'Название подразделения'}),
+            'description': forms.Textarea(attrs={'class': 'mc-textarea', 'rows': 4, 'placeholder': 'Описание подразделения'}),
+        }
 
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
-    """
-    Список подразделений в виде «карточек» с кнопкой редактирования
-    и ссылкой на связанные мероприятия.
-    """
+
     list_display = ("card",)
     list_display_links = ("card",)
     search_fields = ("name", "description")
     list_per_page = 30
 
-    # Переиспользуем те же стили, что и у EventAdmin
-    class Media:
-        css = {"all": ("events/admin.css",)}
-
     def card(self, obj: Department):
-        # URL редактирования подразделения
-        edit_url = reverse("admin:departments_department_change", args=[obj.pk])
-        # URL списка мероприятий, отфильтрованных по подразделению
-        events_url = reverse("admin:events_event_changelist") + f"?department__id__exact={obj.pk}"
-
-        # Подсчёты (аккуратно, если связей нет)
-        try:
-            events_count = obj.event_set.count()
-        except Exception:
-            events_count = None
-
-        # Кастомный User с FK на Department обычно даёт обратную связь user_set,
-        # если не задан related_name на поле department у users.User
-        try:
-            users_count = obj.user_set.count()
-        except Exception:
-            # Если у модели User задано related_name='users' — можно раскомментировать:
-            # users_count = obj.users.count()
-            users_count = None
-
-        # Описание (если поле есть)
-        desc = getattr(obj, "description", None)
-        if desc:
-            short = Truncator(desc).chars(260)
-            has_more = short != desc
-            details = "" if not has_more else format_html(
-                '<details class="evt-details"><summary>показать полностью</summary><div>{}</div></details>',
-                desc.replace("\n", "<br/>"),
-            )
-            desc_html = format_html("{}{}", short if not has_more else short + "…", details)
-        else:
-            desc_html = "—"
-
-        # Мета (если есть created_at/updated_at — отобразим; иначе «—»)
-        created = getattr(obj, "created_at", None) or "—"
-        updated = getattr(obj, "updated_at", None) or "—"
+        desc = (getattr(obj, "description", "") or "—").replace("\n", "<br/>")
+        events_count = obj.event_set.count() if hasattr(obj, "event_set") else 0
+        users_count = obj.user_set.count() if hasattr(obj, "user_set") else 0
 
         return format_html(
-            """
-            <div class="evt-card">
-              <div class="evt-head">
-                <span class="evt-title" style="font-size:15px;font-weight:600;">{name}</span>
+            '''
+            <div class="mc-card">
+              <div class="mc-head">
+                <span class="mc-id">#{id}</span>
+                <h2 class="mc-title">{name}</h2>
               </div>
 
-              <div class="evt-toolbar">
-                <a class="evt-btn" href="{edit}">✏️ Изменить</a>
-                <a class="evt-btn" href="{events}">🗂 Показать мероприятия этого подразделения{suffix_events}</a>
+              <div class="mc-grid">
+                <div class="mc-box"><div class="mc-label">Мероприятий</div><p class="mc-val">{events_count}</p></div>
+                <div class="mc-box"><div class="mc-label">Пользователей</div><p class="mc-val">{users_count}</p></div>
               </div>
 
-              <div class="evt-grid">
-                <div><b>ID:</b> {id}</div>
-                <div><b>Всего мероприятий:</b> {events_count}</div>
-                <div><b>Всего пользователей:</b> {users_count}</div>
+              <div class="mc-box" style="margin-top:12px">
+                <div class="mc-label">Описание</div>
+                <div class="mc-prose">{desc}</div>
               </div>
 
-              <div class="evt-desc">
-                <b>Описание:</b><br/>{desc}
-              </div>
-
-              <div class="evt-meta">
-                <span>Создано: {created}</span>
-                <span>Обновлено: {updated}</span>
+              <div class="mc-meta">
+                <div>Создано: {created}</div><div>Обновлено: {updated}</div>
               </div>
             </div>
-            """,
-            name=obj.name,
-            edit=edit_url,
-            events=events_url,
-            suffix_events="" if events_count is None else f" ({events_count})",
-            id=obj.pk,
-            events_count="—" if events_count is None else events_count,
-            users_count="—" if users_count is None else users_count,
-            desc=desc_html,
-            created=created,
-            updated=updated,
+            ''',
+            id=obj.pk, name=obj.name, slug=(getattr(obj, "slug", "—") or "—"),
+            events_count=events_count, users_count=users_count, desc=desc,
+            created=(date_format(getattr(obj, "created_at", None), "j E Y в H:i") if getattr(obj, "created_at",
+                                                                                             None) else "—"),
+            updated=(date_format(getattr(obj, "updated_at", None), "j E Y в H:i") if getattr(obj, "updated_at",
+                                                                                             None) else "—"),
         )
 
     card.short_description = "Подразделение"
+
+    class Media:
+        css = {"all": ("departments/admin-card.css",)}

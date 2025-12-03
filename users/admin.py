@@ -1,4 +1,3 @@
-# users/admin.py
 from django.contrib import admin, messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
@@ -6,14 +5,28 @@ from django.contrib.auth.models import Group
 from django.http import HttpResponseRedirect
 from django.urls import path, reverse
 from django.utils.html import format_html
+from django.utils.formats import date_format
+from django import forms
+
 
 User = get_user_model()
 
 
-# ---------------------- КАСТОМНЫЕ ФИЛЬТРЫ ----------------------
+class UserForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = "__all__"
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'mc-input', 'placeholder': 'Логин'}),
+            'email': forms.EmailInput(attrs={'class': 'mc-input', 'placeholder': 'Email'}),
+            'first_name': forms.TextInput(attrs={'class': 'mc-input', 'placeholder': 'Имя'}),
+            'last_name': forms.TextInput(attrs={'class': 'mc-input', 'placeholder': 'Фамилия'}),
+            'department': forms.Select(attrs={'class': 'mc-input'}),
+            'description': forms.Textarea(attrs={'class': 'mc-textarea', 'rows': 4, 'placeholder': 'Описание'}),
+        }
+
 
 class InAdminGroupFilter(admin.SimpleListFilter):
-    """Фильтр: состоит ли пользователь в группе 'admin'."""
     title = "В группе admin"
     parameter_name = "in_admin_group"
 
@@ -45,7 +58,6 @@ class InAdminGroupFilter(admin.SimpleListFilter):
 
 
 class StaffAccessFilter(admin.SimpleListFilter):
-    """Фильтр: есть ли доступ в админку (is_staff)."""
     title = "Доступ в админку"
     parameter_name = "staff_access"
 
@@ -66,17 +78,11 @@ class StaffAccessFilter(admin.SimpleListFilter):
 
 @admin.register(User)
 class UserAdmin(DjangoUserAdmin):
-    """
-    Карточки пользователей + быстрые действия.
-    Никаких 'roles' — только группы и флаги is_staff/is_superuser.
-    """
 
-    # Список — одна колонка «карточка»
     list_display = ("card",)
     list_display_links = ("card",)
     list_per_page = 30
 
-    # Фильтры/поиск — убрал сырой 'groups' и добавил понятные фильтры
     list_filter = (
         "is_active",
         "is_superuser",
@@ -86,7 +92,6 @@ class UserAdmin(DjangoUserAdmin):
     )
     search_fields = ("username", "first_name", "last_name", "email", "department__name")
 
-    # Поля формы на странице изменения/создания
     fieldsets = DjangoUserAdmin.fieldsets + (
         ("Организация", {"fields": ("department",)}),
     )
@@ -94,11 +99,6 @@ class UserAdmin(DjangoUserAdmin):
         (None, {"fields": ("department",)}),
     )
 
-    class Media:
-        # Переиспользуем стили карточек из событий
-        css = {"all": ("events/admin.css",)}
-
-    # ---------------------- Пользовательские URL'ы ----------------------
     def get_urls(self):
         urls = super().get_urls()
         my = [
@@ -134,11 +134,6 @@ class UserAdmin(DjangoUserAdmin):
         return self._back(request, "admin:users_user_changelist")
 
     def toggle_admin(self, request, pk):
-        """
-        Выдаёт/снимает группу 'admin' и синхронизирует is_staff.
-        - Если добавили в 'admin' → is_staff=True.
-        - Если убрали из 'admin' → is_staff=False (кроме superuser).
-        """
         obj = User.objects.filter(pk=pk).first()
         if not obj:
             messages.error(request, "Пользователь не найден.")
@@ -152,7 +147,6 @@ class UserAdmin(DjangoUserAdmin):
         if obj.groups.filter(id=admin_group.id).exists():
             # Снять 'admin'
             obj.groups.remove(admin_group)
-            # Суперпользователей не трогаем: им админка доступна всегда
             if not obj.is_superuser and obj.is_staff:
                 obj.is_staff = False
                 obj.save(update_fields=["is_staff"])
@@ -167,98 +161,46 @@ class UserAdmin(DjangoUserAdmin):
 
         return self._back(request, "admin:users_user_changelist")
 
-    # ---------------------- Карточка пользователя ----------------------
     def card(self, obj: User):
-        edit_url = reverse("admin:users_user_change", args=[obj.pk])
-        toggle_active_url = reverse("admin:users_user_toggle_active", args=[obj.pk])
-        toggle_admin_url = reverse("admin:users_user_toggle_admin", args=[obj.pk])
+        full_name = obj.get_full_name() or obj.username or f"id:{obj.pk}"
+        dept_name = getattr(getattr(obj, "department", None), "name", "—")
+        groups = ", ".join(obj.groups.values_list("name", flat=True)) or "—"
 
-        fio = " ".join(filter(None, [obj.last_name, obj.first_name])) or obj.username or "—"
-        email = obj.email or "—"
-        dep_name = getattr(getattr(obj, "department", None), "name", "—")
-
-        # Бейджи-признаки для наглядности
-        badges = []
-        if obj.is_superuser:
-            badges.append("superuser")
-        if obj.is_staff:
-            badges.append("staff")
-        if obj.groups.filter(name="admin").exists():
-            badges.append("admin")
-        badges_str = ", ".join(badges) or "—"
-
-        # счётчики (если заданы related_name)
-        def _safe_count(qs_name):
-            try:
-                qs = getattr(obj, qs_name, None)
-                return qs.count() if qs is not None else "—"
-            except Exception:
-                return "—"
-
-        created_cnt = _safe_count("events_created")
-        responsible_cnt = _safe_count("events_responsible")
-
-        last_login = obj.last_login.strftime("%d.%m.%Y %H:%M") if obj.last_login else "—"
-        joined = obj.date_joined.strftime("%d.%m.%Y %H:%M") if obj.date_joined else "—"
-
-        active_badge = format_html(
-            '<span style="display:inline-flex;align-items:center;gap:6px;">'
-            '<span style="width:10px;height:10px;border-radius:50%;background:{};display:inline-block;"></span>'
-            '{}'
-            "</span>",
-            "#22c55e" if obj.is_active else "#ef4444",
-            "Активен" if obj.is_active else "Заблокирован",
-        )
-
-        toolbar = format_html(
-            """
-            <div class="evt-toolbar">
-              <a class="evt-btn" href="{edit}">✏️ Изменить</a>
-              <a class="evt-btn" href="{t_active}">{active_action}</a>
-              <a class="evt-btn" href="{t_admin}">{admin_action}</a>
-            </div>
-            """,
-            edit=edit_url,
-            t_active=toggle_active_url,
-            active_action=("🔓 Разблокировать" if not obj.is_active else "🔒 Заблокировать"),
-            t_admin=toggle_admin_url,
-            admin_action=("➖ Снять admin" if obj.groups.filter(name="admin").exists() else "➕ Выдать admin"),
-        )
-
-        headline = format_html(
-            '<div class="evt-head">'
-            '<span class="evt-title" style="font-size:15px;font-weight:600;">{fio}</span>'
-            '<span style="margin-left:auto;">{active}</span>'
-            "</div>",
-            fio=fio,
-            active=active_badge,
-        )
-
-        about_html = format_html(
-            "<b>Логин:</b> {}<br/><b>Email:</b> {}<br/><b>Подразделение:</b> {}<br/><b>Группы доступа:</b> {}",
-            obj.username or "—", email, dep_name, badges_str,
-        )
-
-        body = format_html(
-            """
-            <div class="evt-grid">
-              <div><b>ID:</b> {id}</div>
-              <div><b>Создано мероприятий:</b> {cr}</div>
-              <div><b>Ответственный в мероприятиях:</b> {rs}</div>
-              <div><b>Последний вход:</b> {ll}</div>
-              <div><b>Добавлен:</b> {dj}</div>
-            </div>
-            """,
-            id=obj.pk,
-            cr=created_cnt,
-            rs=responsible_cnt,
-            ll=last_login,
-            dj=joined,
-        )
+        chip_active = format_html('<span class="mc-chip {}">Активен</span>', "mc-chip--ok" if obj.is_active else "")
+        chip_staff = format_html('<span class="mc-chip {}">Staff</span>', "mc-chip--warn" if obj.is_staff else "")
+        chip_super = format_html('<span class="mc-chip {}">Superuser</span>',
+                                 "mc-chip--danger" if obj.is_superuser else "")
 
         return format_html(
-            '<div class="evt-card">{headline}{toolbar}<div class="evt-desc">{about}</div>{body}</div>',
-            headline=headline, toolbar=toolbar, about=about_html, body=body
+            '''
+            <div class="mc-card">
+              <div class="mc-head">
+                <span class="mc-id">#{id}</span>
+                <h2 class="mc-title">{name}</h2>
+              </div>
+
+              <div class="mc-chips">{chip_active} {chip_staff} {chip_super}</div>
+
+              <div class="mc-grid">
+                <div class="mc-box"><div class="mc-label">Логин</div><p class="mc-val">{username}</p></div>
+                <div class="mc-box"><div class="mc-label">Email</div><p class="mc-val">{email}</p></div>
+                <div class="mc-box"><div class="mc-label">Подразделение</div><p class="mc-val">{department}</p></div>
+                <div class="mc-box"><div class="mc-label">Группы</div><p class="mc-val">{groups}</p></div>
+              </div>
+
+              <div class="mc-meta">
+                <div>Последний вход: {last_login}</div><div>Создан: {date_joined}</div>
+              </div>
+            </div>
+            ''',
+            id=obj.pk, name=full_name, username=(obj.username or "—"),
+            email=(obj.email or "—"), department=dept_name, groups=groups,
+            chip_active=chip_active, chip_staff=chip_staff, chip_super=chip_super,
+            last_login=(date_format(obj.last_login, "j E Y в H:i") if getattr(obj, "last_login", None) else "—"),
+            date_joined=(date_format(obj.date_joined, "j E Y в H:i") if getattr(obj, "date_joined", None) else "—"),
         )
 
     card.short_description = "Пользователь"
+
+    class Media:
+        css = {"all": ("users/admin-card.css",)}

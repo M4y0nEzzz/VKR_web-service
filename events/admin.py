@@ -1,16 +1,14 @@
-# events/admin.py
 from django.contrib import admin, messages
 from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import path, reverse
 from django.utils.html import format_html
-from django.utils.text import Truncator
 from django.utils import timezone
 from django.utils.formats import date_format
-
 from .models import Event
-
 import openpyxl
 from io import BytesIO
+from django.contrib import admin
+from django import forms
 
 
 def _fmt_dt(dt):
@@ -18,6 +16,18 @@ def _fmt_dt(dt):
         return "—"
     dt = timezone.localtime(dt) if timezone.is_aware(dt) else dt
     return date_format(dt, "j E Y г. H:i")
+
+
+class EventForm(forms.ModelForm):
+    class Meta:
+        model = Event
+        fields = "__all__"
+        widgets = {
+            'description': forms.Textarea(attrs={'class': 'mc-textarea', 'rows': 4, 'placeholder': 'Описание события'}),
+            'title': forms.TextInput(attrs={'class': 'mc-input', 'placeholder': 'Заголовок мероприятия'}),
+            'date_start': forms.DateTimeInput(attrs={'class': 'mc-input', 'type': 'datetime-local'}),
+            'date_end': forms.DateTimeInput(attrs={'class': 'mc-input', 'type': 'datetime-local'}),
+        }
 
 
 @admin.register(Event)
@@ -42,9 +52,8 @@ class EventAdmin(admin.ModelAdmin):
     ]
 
     class Media:
-        css = {"all": ("events/admin.css",)}
+        css = {"all": ("events/admin-card.css",)}
 
-    # --- custom admin URLs (names live under the 'admin' namespace) ---
     def get_urls(self):
         urls = super().get_urls()
         my = [
@@ -64,7 +73,6 @@ class EventAdmin(admin.ModelAdmin):
     def _back(self, request, fallback=".."):
         return HttpResponseRedirect(request.META.get("HTTP_REFERER") or fallback)
 
-    # --- handlers for quick actions ---
     def toggle_publish(self, request, pk):
         obj = Event.objects.filter(pk=pk).first()
         if not obj:
@@ -77,7 +85,7 @@ class EventAdmin(admin.ModelAdmin):
 
         obj.is_published = not obj.is_published
         obj.save(update_fields=["is_published", "updated_at"])
-        messages.success(request, f'Публикация: {"включена" if obj.is_published else "выключена"}')
+        messages.success(request, f'{"Опубликовано" if obj.is_published else "Снято с публикации"}')
         return self._back(request, fallback=reverse("admin:events_event_changelist"))
 
     def set_status(self, request, pk, status):
@@ -100,118 +108,75 @@ class EventAdmin(admin.ModelAdmin):
         messages.success(request, f"Статус изменён на «{obj.get_status_display()}».")
         return self._back(request, fallback=reverse("admin:events_event_changelist"))
 
-    # --- card renderer ---
     def card(self, obj: Event):
-        colors = {
-            "planned": "#3b82f6",
-            "ongoing": "#22c55e",
-            "completed": "#9ca3af",
-            "cancelled": "#ef4444",
+        status_to_cls = {
+            "planned": "mc-chip--planned",
+            "ongoing": "mc-chip--ongoing",
+            "completed": "mc-chip--completed",
+            "cancelled": "mc-chip--cancelled",
         }
-        color = colors.get(obj.status, "#d1d5db")
-
-        # IMPORTANT: URLs must be under the 'admin' namespace
-        edit_url = reverse("admin:events_event_change", args=[obj.pk])
-        toggle_url = reverse("admin:events_event_toggle_publish", args=[obj.pk])
-        set_status = lambda s: reverse("admin:events_event_set_status", args=[obj.pk, s])
+        status_label = dict(Event.STATUS_CHOICES).get(obj.status, obj.status or "—")
+        status_chip = format_html('<span class="mc-chip {}">{}</span>', status_to_cls.get(obj.status, ""), status_label)
+        pub_chip = format_html('<span class="mc-chip {}">{}</span>',
+                               "mc-chip--ok" if obj.is_published else "mc-chip--bad",
+                               "Опубликовано" if obj.is_published else "Не опубликовано")
 
         locations = ", ".join(obj.locations.values_list("name", flat=True)) or "—"
         participants = ", ".join(map(str, obj.participants.all())) or "—"
-
-        raw_desc = obj.description or "—"
-        short = Truncator(raw_desc).chars(260)
-        has_more = short != raw_desc
-
-        pub_badge = format_html(
-            '<span style="display:inline-flex;align-items:center;gap:6px;">'
-            '<span style="width:10px;height:10px;border-radius:50%;background:{};display:inline-block;"></span>'
-            '{}'
-            "</span>",
-            "#22c55e" if obj.is_published else "#ef4444",
-            "Опубликовано" if obj.is_published else "Не опубликовано",
-        )
-
-        toolbar = format_html(
-            """
-            <div class="evt-toolbar">
-              <a class="evt-btn" href="{edit}">✏️ Изменить</a>
-              <a class="evt-btn" href="{toggle}">{pub_action}</a>
-              <span class="evt-split"></span>
-              <span class="evt-label">Статус:</span>
-              <a class="evt-link" href="{s_pl}">Запланировано</a>
-              <a class="evt-link" href="{s_on}">В процессе</a>
-              <a class="evt-link" href="{s_cm}">Завершено</a>
-              <a class="evt-link" href="{s_cc}">Отменено</a>
-            </div>
-            """,
-            edit=edit_url,
-            toggle=toggle_url,
-            pub_action="Снять с публикации" if obj.is_published else "Опубликовать",
-            s_pl=set_status("planned"),
-            s_on=set_status("ongoing"),
-            s_cm=set_status("completed"),
-            s_cc=set_status("cancelled"),
-        )
+        desc = (obj.description or "—").replace("\n", "<br/>")
 
         return format_html(
-            """
-            <div class="evt-card">
-              <div class="evt-head">
-                <span class="evt-id">#{id}</span>
-                <span class="evt-title">{title}</span>
-                <span class="evt-status" style="color:{color};">{status}</span>
+            '''
+            <div class="mc-card">
+              <div class="mc-head">
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <span class="mc-id">#{id}</span>
+                  <h2 class="mc-title">{title}</h2>
+                </div>
               </div>
 
-              {toolbar}
+              <div class="mc-chips">{status_chip} {pub_chip}</div>
 
-              <div class="evt-grid">
-                <div><b>Даты:</b> {start} — {end}</div>
-                <div><b>Категория:</b> {category}</div>
-                <div><b>Подразделение:</b> {dep}</div>
-                <div><b>Ответственный:</b> {resp}</div>
-                <div><b>Места:</b> {locs}</div>
-                <div><b>Участники:</b> {parts}</div>
-                <div><b>Создатель:</b> {creator}</div>
-                <div><b>Публикация:</b> {pub}</div>
+              <div class="mc-grid">
+                <div class="mc-box"><div class="mc-label">Даты</div><p class="mc-val">{date_start} — {date_end}</p></div>
+                <div class="mc-box"><div class="mc-label">Категория</div><p class="mc-val">{category}</p></div>
+                <div class="mc-box"><div class="mc-label">Подразделение</div><p class="mc-val">{department}</p></div>
+                <div class="mc-box"><div class="mc-label">Ответственный</div><p class="mc-val">{responsible}</p></div>
+                <div class="mc-box"><div class="mc-label">Участники</div><p class="mc-val">{participants}</p></div>
+                <div class="mc-box"><div class="mc-label">Места</div><p class="mc-val">{locations}</p></div>
+                <div class="mc-box"><div class="mc-label">Создатель</div><p class="mc-val">{creator}</p></div>
+                <div class="mc-box"><div class="mc-label">Публикация</div><p class="mc-val">{pub_text}</p></div>
               </div>
 
-              <div class="evt-desc">
-                <b>Описание:</b><br/>
-                {short_desc}
-                {details}
+              <div class="mc-box" style="margin-top:12px">
+                <div class="mc-label">Описание</div>
+                <div class="mc-prose">{desc}</div>
               </div>
 
-              <div class="evt-meta">
-                <span>Создано: {created}</span>
-                <span>Обновлено: {updated}</span>
+              <div class="mc-meta">
+                <div>Создано: {created}</div><div>Обновлено: {updated}</div>
               </div>
             </div>
-            """,
-            id=obj.id,
-            title=obj.title,
-            color=color,
-            status=obj.get_status_display(),
-            toolbar=toolbar,
-            start=_fmt_dt(obj.date_start),
-            end=_fmt_dt(obj.date_end),
+            ''',
+            id=obj.pk, title=obj.title,
+            status_chip=status_chip, pub_chip=pub_chip,
+            date_start=date_format(obj.date_start, "j E Y, H:i"),
+            date_end=(date_format(obj.date_end, "j E Y, H:i") if obj.date_end else "—"),
             category=getattr(obj.category, "name", "—"),
-            dep=getattr(obj.department, "name", "—"),
-            resp=getattr(obj.responsible, "username", "—"),
-            locs=locations,
-            parts=participants,
-            creator=getattr(obj.created_by, "username", "—"),
-            pub=pub_badge,
-            short_desc=short if not has_more else short + "…",
-            details="" if not has_more else format_html(
-                '<details class="evt-details"><summary>показать полностью</summary><div>{}</div></details>',
-                raw_desc.replace("\n", "<br/>"),
-            ),
-            created=_fmt_dt(obj.created_at),
-            updated=_fmt_dt(obj.updated_at),
+            department=getattr(obj.department, "name", "—"),
+            responsible=getattr(getattr(obj, "responsible", None), "username", "—"),
+            participants=participants, locations=locations,
+            creator=getattr(getattr(obj, "created_by", None), "username", "—"),
+            pub_text=("Опубликовано" if obj.is_published else "Не опубликовано"),
+            desc=desc,
+            created=(date_format(getattr(obj, "created_at", None), "j E Y в H:i") if getattr(obj, "created_at",
+                                                                                             None) else "—"),
+            updated=(date_format(getattr(obj, "updated_at", None), "j E Y в H:i") if getattr(obj, "updated_at",
+                                                                                             None) else "—"),
         )
+
     card.short_description = "Мероприятие"
 
-    # --- bulk actions ---
     def mark_as_completed(self, request, queryset):
         queryset.update(status="completed")
         self.message_user(request, "Выбранные мероприятия отмечены как завершенные")
