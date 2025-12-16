@@ -4,7 +4,6 @@ from django.utils.formats import date_format
 from django import forms
 from .models import Location
 
-
 class LocationForm(forms.ModelForm):
     class Meta:
         model = Location

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Мероприятия</title>
+  <link rel="stylesheet" href="/static/events/admin-card.css">
+  <style>
+    .topbar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin: 16px 0; }
+    .btn { padding: 8px 12px; border: 1px solid #333; background: #fff; cursor: pointer; text-decoration:none; }
+    .btn-primary { background:#1f6feb; color:#fff; border-color:#1f6feb; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <h1 style="margin:0;">Мероприятия</h1>
+    <a class="btn btn-primary" href="{% url 'events:event_create' %}">Создать</a>
+  </div>
+
+  {% for e in events %}
+    <div class="mc-card" style="margin-bottom:14px;">
+      <div class="mc-head">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <span class="mc-id">#{{ e.id }}</span>
+          <h2 class="mc-title">{{ e.title }}</h2>
+        </div>
+      </div>
+
+      <div class="mc-grid">
+        <div class="mc-box"><div class="mc-label">Даты</div><p class="mc-val">{{ e.date_start }} — {{ e.date_end|default:"—" }}</p></div>
+        <div class="mc-box"><div class="mc-label">Категория</div><p class="mc-val">{{ e.category }}</p></div>
+        <div class="mc-box"><div class="mc-label">Подразделение</div><p class="mc-val">{{ e.department }}</p></div>
+        <div class="mc-box"><div class="mc-label">Ответственные</div>
+          <p class="mc-val">
+            {% for u in e.responsibles.all %}
+              {{ u.get_full_name|default:u.username }}{% if not forloop.last %}, {% endif %}
+            {% empty %}
+              —
+            {% endfor %}
+          </p>
+        </div>
+        <div class="mc-box"><div class="mc-label">Места</div>
+          <p class="mc-val">
+            {% for l in e.locations.all %}
+              {{ l.name }}{% if not forloop.last %}, {% endif %}
+            {% empty %}
+              —
+            {% endfor %}
+          </p>
+        </div>
+        <div class="mc-box"><div class="mc-label">Публикация</div><p class="mc-val">{% if e.is_published %}Да{% else %}Нет{% endif %}</p></div>
+      </div>
+
+      <div class="mc-box" style="margin-top:12px">
+        <div class="mc-label">Описание</div>
+        <div class="mc-prose">{{ e.description|default:"—" }}</div>
+      </div>
+    </div>
+  {% empty %}
+    <p>Мероприятий нет.</p>
+  {% endfor %}
+
+</body>
+</html>

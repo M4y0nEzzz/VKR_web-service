@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'events',
     'users',
     'locations',
+    'mplan',
 ]
 
 MIDDLEWARE = [
@@ -79,8 +80,12 @@ WSGI_APPLICATION = 'mplan.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'mplan',
+        'USER': 'django_user',
+        'PASSWORD': '2g8bnEV7Cq',
+        'HOST': 'localhost',
+        'PORT': '3306',
     }
 }
 
@@ -103,8 +108,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# User
-AUTH_USER_MODEL = 'users.User'
 
 # Media
 MEDIA_URL = "/media/"

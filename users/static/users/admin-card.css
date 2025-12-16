@@ -1,14 +1,16 @@
 :root{
   --bg:#151923; --text:#e6eaf0; --muted:#9aa4b2; --line:#2a3140; --chip:#1f2937;
-  --ok:#22c55e; --warn:#60a5fa; --danger:#ef4444;
+  --ok:#22c55e; --bad:#ef4444; --accent:#60a5fa; --warn:#f59e0b;
 }
 .mc-card{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:14px}
-.mc-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.mc-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .mc-id{font:600 11px ui-monospace;padding:2px 6px;border:1px solid var(--line);border-radius:6px;color:var(--muted)}
 .mc-title{margin:0;font-size:18px;line-height:1.25;font-weight:800}
 .mc-chips{display:flex;gap:8px;margin:10px 0 6px;flex-wrap:wrap}
 .mc-chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;background:var(--chip);border:1px solid var(--line);font-weight:700;font-size:12px}
-.mc-chip--ok{color:var(--ok)} .mc-chip--warn{color:var(--warn)} .mc-chip--danger{color:var(--danger)}
+.mc-chip--ok{color:var(--ok)} .mc-chip--bad{color:var(--bad)}
+.mc-chip--planned{color:#60a5fa} .mc-chip--ongoing{color:#f59e0b}
+.mc-chip--completed{color:#9ca3af} .mc-chip--cancelled{color:#ef4444}
 .mc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:8px}
 @media (max-width:1200px){.mc-grid{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:900px){.mc-grid{grid-template-columns:repeat(2,1fr)}}
@@ -16,10 +18,11 @@
 .mc-box{border:1px dashed var(--line);border-radius:10px;padding:10px 12px;background:transparent}
 .mc-label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 6px}
 .mc-val{font-size:15px;font-weight:700;margin:0}
+.mc-prose{font-weight:400;line-height:1.6}
 .mc-meta{display:flex;gap:16px;margin-top:12px;color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:8px}
 
 
-/* стиль для редактирования формы пользователей */
+/* стиль для редактирования формы событий */
 .mc-form .mc-input,
 .mc-form .mc-textarea {
     background: var(--bg);
