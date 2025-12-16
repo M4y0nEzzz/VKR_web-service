@@ -4,13 +4,15 @@ from django.utils.formats import date_format
 from django import forms
 from .models import Category
 
+
 class CategoryForm(forms.ModelForm):
     class Meta:
         model = Category
         fields = ["name"]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'mc-input', 'placeholder': 'Название категории'}),
-            'description': forms.Textarea(attrs={'class': 'mc-textarea', 'rows': 4, 'placeholder': 'Описание категории'}),
+            'description': forms.Textarea(
+                attrs={'class': 'mc-textarea', 'rows': 4, 'placeholder': 'Описание категории'}),
             'color': forms.TextInput(attrs={'class': 'mc-input', 'placeholder': 'Цвет метки (HEX)', 'type': 'color'}),
         }
 
@@ -35,7 +37,7 @@ class CategoryAdmin(admin.ModelAdmin):
               </div>
 
               <div class="mc-grid">
-                
+
                 <div class="mc-box"><div class="mc-label">Мероприятий</div><p class="mc-val">{events_count}</p></div>
               </div>
 

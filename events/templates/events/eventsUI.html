@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<h1>Мероприятия</h1>
+
+<ul>
+  {% for event in events %}
+    <li>
+      <strong>{{ event.name }}</strong> —
+      {{ event.date|date:"d.m.Y H:i" }} до {{ event.end_date|date:"d.m.Y H:i" }}<br>
+      <em>{{ event.place }}</em>
+    </li>
+  {% empty %}
+    <li>Нет мероприятий</li>
+  {% endfor %}
+</ul>
+
+{% endblock %}

@@ -1,99 +1,92 @@
-from django.contrib.auth.decorators import login_required
-from django.db import transaction
 from django.shortcuts import render, redirect
-from django.urls import reverse
-
-from categories.models import Category
-from departments.models import Department
-from locations.models import Location
-from users.models import User
-
-from .forms import EventBaseForm, EventDateFormSet
+from django.http import HttpResponse
 from .models import Event
+from django.contrib import messages
 
-
-def _is_admin(user) -> bool:
-    return user.groups.filter(name="admin").exists()
-
-
-def _is_department_head(user) -> bool:
-    return user.groups.filter(name="department_head").exists()
-
-
-def _events_for_user(user):
-    qs = Event.objects.all().select_related("category", "department", "created_by").prefetch_related("responsibles", "locations")
-
-    if _is_admin(user):
-        return qs
-
-    if _is_department_head(user):
-        # если department не задан, то хотя бы свои
-        if getattr(user, "department_id", None):
-            return qs.filter(department_id=user.department_id) | qs.filter(created_by_id=user.id)
-        return qs.filter(created_by_id=user.id)
-
-    return qs.filter(created_by_id=user.id)
-
-
-@login_required
+# Просмотр списка всех мероприятий
 def event_list(request):
-    events = _events_for_user(request.user).order_by("-date_start")
-    return render(request, "list.html", {"events": events})
+    events = Event.objects.all()  # Получаем все мероприятия из базы данных
+    return render(request, 'events/event_list.html', {'events': events})
 
-
-@login_required
-def event_create(request):
-    if request.method == "POST":
-        form = EventBaseForm(
-            request.POST,
-            Category=Category,
-            Department=Department,
-            UserModel=User,
-            Location=Location,
+# Страница для создания нового мероприятия (будет использовать стандартную форму Django)
+def create_event(request):
+    if request.method == 'POST':
+        event = Event(
+            name=request.POST.get('name'),
+            date=request.POST.get('date'),
+            end_date=request.POST.get('end_date'),
+            place=request.POST.get('place'),
+            category_id=request.POST.get('category'),
+            department_id=request.POST.get('department'),
+            responsible=request.POST.getlist('responsible'),
+            comment=request.POST.get('comment')
         )
-        formset = EventDateFormSet(request.POST)
+        event.save()  # Сохраняем новое мероприятие
+        messages.success(request, 'Мероприятие успешно добавлено!')
+        return redirect('event_list')  # Перенаправляем на страницу со списком мероприятий
+    return render(request, 'events/create_event.html')
 
-        if form.is_valid() and formset.is_valid():
-            # Проверим, что есть хотя бы одна "живая" дата
-            has_any = False
-            for df in formset:
-                if df.cleaned_data and not df.cleaned_data.get("DELETE", False):
-                    has_any = True
-                    break
+# Просмотр конкретного мероприятия
+def event_detail(request, pk):
+    event = Event.objects.get(pk=pk)  # Получаем конкретное мероприятие по его ID
+    return render(request, 'events/event_detail.html', {'event': event})
 
-            if not has_any:
-                formset.non_form_errors = lambda: ["Добавьте хотя бы одну дату проведения."]
-                return render(request, "form.html", {"form": form, "formset": formset})
+# Страница для редактирования мероприятия
+def edit_event(request, pk):
+    event = Event.objects.get(pk=pk)
+    if request.method == 'POST':
+        event.name = request.POST.get('name')
+        event.date = request.POST.get('date')
+        event.end_date = request.POST.get('end_date')
+        event.place = request.POST.get('place')
+        event.category_id = request.POST.get('category')
+        event.department_id = request.POST.get('department')
+        event.responsible = request.POST.getlist('responsible')
+        event.comment = request.POST.get('comment')
+        event.save()  # Сохраняем изменения
+        messages.success(request, 'Мероприятие обновлено!')
+        return redirect('event_list')  # Перенаправляем на страницу со списком мероприятий
+    return render(request, 'events/edit_event.html', {'event': event})
 
-            with transaction.atomic():
-                for df in formset:
-                    if not df.cleaned_data or df.cleaned_data.get("DELETE", False):
-                        continue
+# Экспорт мероприятий в Excel
+def export_events_to_excel(request):
+    from io import BytesIO
+    import openpyxl
 
-                    event = Event.objects.create(
-                        title=form.cleaned_data["title"],
-                        category=form.cleaned_data["category"],
-                        department=form.cleaned_data["department"],
-                        description=form.cleaned_data.get("description") or "",
-                        is_published=bool(form.cleaned_data.get("is_published")),
-                        date_start=df.cleaned_data["date_start"],
-                        date_end=df.cleaned_data.get("date_end"),
-                        created_by=request.user,
-                    )
+    # Создание файла Excel
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Мероприятия"
 
-                    # ВАЖНО: M2M применяем к КОНКРЕТНОМУ событию
-                    event.responsibles.set(form.cleaned_data["responsibles"])
-                    event.locations.set(form.cleaned_data["locations"])
+    headers = [
+        "ID", "Название", "Дата начала", "Дата окончания", "Категория",
+        "Подразделение", "Ответственный", "Место", "Создатель", "Комментарий"
+    ]
+    worksheet.append(headers)
 
-            return redirect(reverse("events:event_list"))
+    events = Event.objects.all()
+    for event in events:
+        worksheet.append([
+            event.id,
+            event.name or "",
+            event.date.strftime('%Y-%m-%d %H:%M') if event.date else "",
+            event.end_date.strftime('%Y-%m-%d %H:%M') if event.end_date else "",
+            event.category.name if event.category else "",
+            event.department.name if event.department else "",
+            ", ".join([user.displayname for user in event.responsible.all()]),
+            event.place or "",
+            event.user.username if event.user else "",
+            event.comment or "",
+        ])
 
-    else:
-        form = EventBaseForm(
-            Category=Category,
-            Department=Department,
-            UserModel=User,
-            Location=Location,
-        )
-        formset = EventDateFormSet()
+    # Сохранение файла в ответе
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
 
-    return render(request, "form.html", {"form": form, "formset": formset})
+    response = HttpResponse(
+        output.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response['Content-Disposition'] = 'attachment; filename="events_export.xlsx"'
+    return response

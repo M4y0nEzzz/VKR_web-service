@@ -7,6 +7,7 @@ from .models import Event
 from io import BytesIO
 import openpyxl
 from django.http import HttpResponse
+from openpyxl.styles import Alignment
 
 def _fmt_dt(dt):
     if not dt:
@@ -112,39 +113,63 @@ class EventAdmin(admin.ModelAdmin):
 
     # Экспорт в Excel
     def export_to_excel(self, request, queryset):
+        # Создание нового Excel файла
         workbook = openpyxl.Workbook()
         worksheet = workbook.active
-        worksheet.title = "Мероприятия"
+        worksheet.title = "План мероприятий"
 
+        # Заголовки для таблицы
         headers = [
-            "ID", "Название", "Дата начала", "Дата окончания", "Категория",
-            "Подразделение", "Ответственный", "Место", "Создатель", "Комментарий"
+            "№", "Название мероприятия", "Дата начала", "Дата окончания", "Категория",
+            "Подразделение", "Ответственные", "Место проведения", "Комментарий"
         ]
-        worksheet.append(headers)
 
-        for event in queryset:
-            worksheet.append([
-                event.id,
-                event.name or "",
-                _fmt_dt(event.date),
-                _fmt_dt(event.end_date),
-                event.category.name if event.category else "",
-                event.department.name if event.department else "",
-                event.responsible or "",
-                event.place or "",
-                event.user.username if event.user else "",
-                event.comment or "",
-            ])
+        # Добавление заголовков в первую строку
+        for col_num, header in enumerate(headers, 1):
+            worksheet.cell(row=1, column=col_num, value=header)
 
+        # Настройка выравнивания для заголовков
+        for col_num in range(1, len(headers) + 1):
+            worksheet.cell(row=1, column=col_num).alignment = Alignment(horizontal='center', vertical='center')
+
+        # Заполнение строк данными
+        row_num = 2  # Начнем с второй строки
+        for idx, event in enumerate(queryset, start=1):
+            responsible_names = event.responsible  # Просто берем строку
+            worksheet.cell(row=row_num, column=1, value=idx)  # Номер мероприятия
+            worksheet.cell(row=row_num, column=2, value=event.name)  # Название мероприятия
+            worksheet.cell(row=row_num, column=3,
+                           value=event.date.strftime('%d-%m-%Y %H:%M') if event.date else "")  # Дата начала
+            worksheet.cell(row=row_num, column=4,
+                           value=event.end_date.strftime('%d-%m-%Y %H:%M') if event.end_date else "")  # Дата окончания
+            worksheet.cell(row=row_num, column=5, value=event.category.name if event.category else "")  # Категория
+            worksheet.cell(row=row_num, column=6,
+                           value=event.department.name if event.department else "")  # Подразделение
+            worksheet.cell(row=row_num, column=7, value=responsible_names or "")  # Ответственные (строка)
+            worksheet.cell(row=row_num, column=8, value=event.place)  # Место проведения
+            worksheet.cell(row=row_num, column=9, value=event.comment)  # Комментарий
+
+            row_num += 1
+
+        # Выравнивание текста в ячейках
+        for row in worksheet.iter_rows(min_row=2, min_col=1, max_col=9, max_row=row_num - 1):
+            for cell in row:
+                cell.alignment = Alignment(horizontal='left', vertical='center')
+
+        # Сохранение файла в буфер
         output = BytesIO()
         workbook.save(output)
         output.seek(0)
 
+        # Отправка файла в ответ
         response = HttpResponse(
             output.getvalue(),
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-        response["Content-Disposition"] = 'attachment; filename="events_export.xlsx"'
+        response['Content-Disposition'] = 'attachment; filename="plan_meropriyatiy.xlsx"'
         return response
 
     export_to_excel.short_description = "Экспортировать в Excel"
+
+    # Register the action for exporting to Excel
+    actions = [export_to_excel]
