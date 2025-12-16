@@ -19,11 +19,13 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from users import views
+from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/', views.ldap_login, name='ldap_login'),
     path('', views.home, name='home'),
+    path("events/", include("events.urls")),
 ]
 
 if settings.DEBUG:

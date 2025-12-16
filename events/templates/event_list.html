@@ -1,16 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event List</title>
+    <title>Мероприятия</title>
 </head>
 <body>
-    <h2>Events</h2>
-    <ul>
-        {% for event in events %}
-            <li>{{ event.title }} - {{ event.date_start }}</li>
+
+<h1>Мероприятия</h1>
+
+<p>
+    <a href="{% url 'events:create' %}">Создать мероприятие</a>
+</p>
+
+<hr>
+
+{% for event in events %}
+    <div style="border: 1px solid #000; padding: 10px; margin-bottom: 10px">
+        <strong>{{ event.title }}</strong><br>
+
+        {{ event.date_start }} — {{ event.date_end|default:"—" }}<br>
+        Категория: {{ event.category }}<br>
+        Подразделение: {{ event.department }}<br>
+
+        Ответственные:
+        {% for u in event.responsibles.all %}
+            {{ u.get_full_name|default:u.username }}{% if not forloop.last %}, {% endif %}
         {% endfor %}
-    </ul>
+    </div>
+{% empty %}
+    <p>Мероприятий нет.</p>
+{% endfor %}
+
 </body>
 </html>
