@@ -58,13 +58,11 @@ class Event(models.Model):
         verbose_name='Подразделение'
     )
 
-    responsible = models.ForeignKey(
+    responsibles = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
+        related_name="events_responsible_many",
         blank=True,
-        related_name='events_responsible',
-        verbose_name='Ответственный'
+        verbose_name="Ответственные"
     )
 
     participants = models.ManyToManyField(
@@ -149,7 +147,7 @@ class Event(models.Model):
         verbose_name_plural = 'Мероприятия'
         constraints = [
             models.CheckConstraint(
-                check=models.Q(date_end__isnull=True) | models.Q(date_end__gte=models.F("date_start")),
-                name="event_end_gte_start_or_null",
+                condition=models.Q(date_end__gte=models.F("date_start")),
+                name="event_end_after_start",
             )
         ]
