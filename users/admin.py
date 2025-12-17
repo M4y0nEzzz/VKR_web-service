@@ -8,12 +8,12 @@ class UserAdmin(admin.ModelAdmin):
     list_display = ("card",)
     list_display_links = ("card",)
     list_per_page = 30
-
-    search_fields = ("name", "displayname", "role", "department__name")
+    search_fields = ("name", "displayname", "role",
+                     "department__name")
     list_filter = ("role", "department")
 
     class Media:
-        css = {"all": ("events/admin-card.css",)}  # ⚠️ Обязательно подключаем тот же CSS!
+        css = {"all": ("events/admin-card.css",)}
 
     def card(self, obj: User):
         return format_html(

@@ -15,36 +15,9 @@ def _fmt_dt(dt):
     dt = timezone.localtime(dt) if timezone.is_aware(dt) else dt
     return date_format(dt, "j E Y г. H:i")
 
-class EventForm(forms.ModelForm):
-    class Meta:
-        model = Event
-        fields = '__all__'
-        widgets = {
-            "comment": forms.Textarea(
-                attrs={"class": "mc-textarea", "rows": 4, "placeholder": "Комментарий"}
-            ),
-            "name": forms.TextInput(
-                attrs={"class": "mc-input", "placeholder": "Название мероприятия"}
-            ),
-            "date": forms.DateTimeInput(
-                attrs={"class": "mc-input", "type": "datetime-local"},
-                format="%Y-%m-%dT%H:%M",
-            ),
-            "end_date": forms.DateTimeInput(
-                attrs={"class": "mc-input", "type": "datetime-local"},
-                format="%Y-%m-%dT%H:%M",
-            ),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for f in ("date", "end_date"):
-            if f in self.fields:
-                self.fields[f].input_formats = ["%Y-%m-%dT%H:%M"]
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    form = EventForm
     list_display = ("card",)
     list_display_links = ("card",)
     list_per_page = 20

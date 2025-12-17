@@ -19,10 +19,10 @@ class CategoryForm(forms.ModelForm):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ("card",)  # Отображаем только карточку
-    list_display_links = ("card",)  # Карточка будет ссылкой
-    search_fields = ("name",)  # Добавляем поиск по полю name
-    list_per_page = 30  # Количество категорий на одной странице
+    list_display = ("card",)
+    list_display_links = ("card",)
+    search_fields = ("name",)
+    list_per_page = 30
 
     def card(self, obj: Category):
         desc = (getattr(obj, "description", "") or "—").replace("\n", "<br/>")

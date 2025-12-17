@@ -16,7 +16,6 @@ class DepartmentForm(forms.ModelForm):
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
-
     list_display = ("card",)
     list_display_links = ("card",)
     search_fields = ("name", "description")

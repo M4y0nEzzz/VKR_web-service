@@ -2,7 +2,7 @@
 from django.db import models
 from categories.models import Category
 from departments.models import Department
-from users.models import User  # или django.contrib.auth.models.User
+from users.models import User
 
 class Event(models.Model):
     name = models.TextField(null=True, blank=True)

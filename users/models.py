@@ -6,7 +6,6 @@ class User(models.Model):
     displayname = models.TextField(null=True, blank=True)
     role = models.TextField(null=True, blank=True)
     password = models.TextField()
-
     department = models.ForeignKey(
         Department,
         models.DO_NOTHING,
