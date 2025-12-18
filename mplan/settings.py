@@ -109,9 +109,13 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Media
+# URLs
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+LOGIN_URL = '/login/'
+LOGOUT_REDIRECT_URL = '/login/login'
+LOGIN_REDIRECT_URL = '/events/ui/'
+
 
 
 # Internationalization

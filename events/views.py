@@ -8,32 +8,47 @@ import openpyxl
 from io import BytesIO
 from django.views.decorators.csrf import csrf_exempt
 from openpyxl.styles import Alignment
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from .models import Event
+from .forms import EventForm
+from django.contrib.auth import get_user_model
 
 
 def event_list(request):
     events = Event.objects.all()
     return render(request, 'events/event_list.html', {'events': events})
 
+
+@login_required
 def create_event(request):
     if request.method == 'POST':
-        event = Event(
-            name=request.POST.get('name'),
-            date=request.POST.get('date'),
-            end_date=request.POST.get('end_date'),
-            place=request.POST.get('place'),
-            category_id=request.POST.get('category'),
-            department_id=request.POST.get('department'),
-            responsible=request.POST.getlist('responsible'),
-            comment=request.POST.get('comment')
-        )
-        event.save()  # Сохраняем новое мероприятие
-        messages.success(request, 'Мероприятие успешно добавлено!')
-        return redirect('event_list')
-    return render(request, 'events/create_event.html')
+        form = EventForm(request.POST)
+        if form.is_valid():
+            event = form.save(commit=False)
+
+            if form.cleaned_data['responsible']:
+                event.responsible = form.cleaned_data['responsible']
+
+            event.save()
+            return redirect('events_ui')
+
+        else:
+            return render(request, 'events/create_event.html', {'form': form})
+
+    else:
+        form = EventForm()
+
+    return render(request, 'events/create_event.html', {'form': form})
+
+
+
+
 
 def event_detail(request, pk):
     event = Event.objects.get(pk=pk)
     return render(request, 'events/event_detail.html', {'event': event})
+
 
 
 def edit_event(request, pk):
@@ -51,6 +66,9 @@ def edit_event(request, pk):
         messages.success(request, 'Мероприятие обновлено!')
         return redirect('event_list')
     return render(request, 'events/edit_event.html', {'event': event})
+
+
+
 
 def export_events_to_excel(request):
     from io import BytesIO
@@ -92,13 +110,19 @@ def export_events_to_excel(request):
     response['Content-Disposition'] = 'attachment; filename="events_export.xlsx"'
     return response
 
+from django.contrib.auth.decorators import login_required
 
+
+
+
+
+@login_required
 def events_ui(request):
     month = request.GET.get('month')
     year = request.GET.get('year')
     sort_order = request.GET.get('sort_order', 'asc')
 
-    events = Event.objects.all().select_related('department', 'category')
+    events = Event.objects.all()
 
     if month:
         try:
@@ -123,21 +147,23 @@ def events_ui(request):
     else:
         events = events.order_by('date')
 
-    for event in events:
-        if event.responsible:
-            event.responsible_list = event.responsible.split(",")
-        else:
-            event.responsible_list = []
 
-    paginator = Paginator(events, 5)
+
+    paginator = Paginator(events, 30)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
+    for event in page_obj:
+        if event.responsible:
+            event.responsible_list = event.responsible.split(',')
+        else:
+            event.responsible_list = []
+
     return render(
-        request, 'events/eventsUI.html',
-        {'page_obj': page_obj, 'month': month,
-        'year': year, 'sort_order': sort_order}
-        )
+        request,
+        'events/eventsUI.html',
+        {'page_obj': page_obj, 'month': month, 'year': year, 'sort_order': sort_order}
+    )
 
 
 @csrf_exempt
@@ -153,7 +179,6 @@ def export_selected_events(request):
         if not events:
             return HttpResponse("Не удалось найти выбранные мероприятия.", status=400)
 
-        # Создаем новый Excel-файл
         workbook = openpyxl.Workbook()
         worksheet = workbook.active
         worksheet.title = "План мероприятий"
@@ -201,3 +226,26 @@ def export_selected_events(request):
         )
         response['Content-Disposition'] = 'attachment; filename="events_export.xlsx"'
         return response
+
+
+def login_view(request):
+    if request.method == "POST":
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            login(request, user)
+            return redirect('events_ui')
+        else:
+            messages.error(request, "Неверный логин или пароль")
+
+    return render(request, 'login.html')
+
+
+def logout_view(request):
+    if request.method == 'POST':
+        logout(request)
+        return redirect('login')
+    return redirect('events_ui')

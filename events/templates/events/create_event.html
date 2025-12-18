@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h1>Создание мероприятия</h1>
+
+  <form method="POST">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Добавить мероприятие</button>
+  </form>
+
+  <a href="{% url 'events_ui' %}">Вернуться к списку мероприятий</a>
+{% endblock %}

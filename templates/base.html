@@ -169,6 +169,9 @@
 <body>
     <div class="container">
         {% block content %}
+            {% if user.is_authenticated %}
+                <a href="{% url 'create_event' %}">Добавить мероприятие</a>
+            {% endif %}
         {% endblock %}
     </div>
 </body>

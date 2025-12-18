@@ -3,6 +3,22 @@
 {% block content %}
   <h1>Список мероприятий</h1>
 
+{% if user.is_authenticated %}
+    <p>Привет, {{ user.username }}!</p>
+    <form method="POST" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit">Выйти</button>
+    </form>
+    <form method="POST" action="{% url 'create_event' %}">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Добавить мероприятие</button>
+    </form>
+  {% else %}
+    <p>Для создания мероприятия нужно войти в систему.</p>
+    <a href="{% url 'login' %}">Войти</a>
+{% endif %}
+
 <form method="GET" action="{% url 'events_ui' %}">
   <label for="month">Выберите месяц:</label>
   <select name="month" id="month">
@@ -109,7 +125,7 @@
     }
 
     .event-card {
-      background-color: #001f33;
+      background-color: #34495e;
       color: white;
       border-radius: 8px;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
