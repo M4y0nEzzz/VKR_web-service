@@ -38,15 +38,6 @@ class DepartmentAdmin(admin.ModelAdmin):
                 <div class="mc-box"><div class="mc-label">Мероприятий</div><p class="mc-val">{events_count}</p></div>
                 <div class="mc-box"><div class="mc-label">Пользователей</div><p class="mc-val">{users_count}</p></div>
               </div>
-
-              <div class="mc-box" style="margin-top:12px">
-                <div class="mc-label">Описание</div>
-                <div class="mc-prose">{desc}</div>
-              </div>
-
-              <div class="mc-meta">
-                <div>Создано: {created}</div><div>Обновлено: {updated}</div>
-              </div>
             </div>
             ''',
             id=obj.pk, name=obj.name, slug=(getattr(obj, "slug", "—") or "—"),

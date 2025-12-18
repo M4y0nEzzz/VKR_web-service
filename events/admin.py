@@ -2,7 +2,6 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.utils import timezone
 from django.utils.formats import date_format
-from django import forms
 from .models import Event
 from io import BytesIO
 import openpyxl
@@ -29,7 +28,6 @@ class EventAdmin(admin.ModelAdmin):
         "place",
         "category__name",
         "department__name",
-        "user__username",
     )
 
     list_filter = (
@@ -86,26 +84,21 @@ class EventAdmin(admin.ModelAdmin):
 
     # Экспорт в Excel
     def export_to_excel(self, request, queryset):
-        # Создание нового Excel файла
         workbook = openpyxl.Workbook()
         worksheet = workbook.active
         worksheet.title = "План мероприятий"
 
-        # Заголовки для таблицы
         headers = [
             "№", "Название мероприятия", "Дата начала", "Дата окончания", "Категория",
             "Подразделение", "Ответственные", "Место проведения", "Комментарий"
         ]
 
-        # Добавление заголовков в первую строку
         for col_num, header in enumerate(headers, 1):
             worksheet.cell(row=1, column=col_num, value=header)
 
-        # Настройка выравнивания для заголовков
         for col_num in range(1, len(headers) + 1):
             worksheet.cell(row=1, column=col_num).alignment = Alignment(horizontal='center', vertical='center')
 
-        # Заполнение строк данными
         row_num = 2  # Начнем с второй строки
         for idx, event in enumerate(queryset, start=1):
             responsible_names = event.responsible  # Просто берем строку
@@ -124,17 +117,14 @@ class EventAdmin(admin.ModelAdmin):
 
             row_num += 1
 
-        # Выравнивание текста в ячейках
         for row in worksheet.iter_rows(min_row=2, min_col=1, max_col=9, max_row=row_num - 1):
             for cell in row:
                 cell.alignment = Alignment(horizontal='left', vertical='center')
 
-        # Сохранение файла в буфер
         output = BytesIO()
         workbook.save(output)
         output.seek(0)
 
-        # Отправка файла в ответ
         response = HttpResponse(
             output.getvalue(),
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -144,5 +134,4 @@ class EventAdmin(admin.ModelAdmin):
 
     export_to_excel.short_description = "Экспортировать в Excel"
 
-    # Register the action for exporting to Excel
     actions = [export_to_excel]
