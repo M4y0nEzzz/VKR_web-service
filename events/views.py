@@ -1,18 +1,13 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponse
-from .models import Event
-from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models.functions import ExtractMonth, ExtractYear
 import openpyxl
 from io import BytesIO
 from django.views.decorators.csrf import csrf_exempt
 from openpyxl.styles import Alignment
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
 from .models import Event
 from .forms import EventForm
-from django.contrib.auth import get_user_model
 
 
 def event_list(request):
@@ -20,7 +15,6 @@ def event_list(request):
     return render(request, 'events/event_list.html', {'events': events})
 
 
-@login_required
 def create_event(request):
     if request.method == 'POST':
         form = EventForm(request.POST)
@@ -42,32 +36,29 @@ def create_event(request):
     return render(request, 'events/create_event.html', {'form': form})
 
 
+def delete_event(request, event_id):
+    event = get_object_or_404(Event, id=event_id)
+    event.delete()
+    return redirect('events_ui')
 
 
 
-def event_detail(request, pk):
-    event = Event.objects.get(pk=pk)
-    return render(request, 'events/event_detail.html', {'event': event})
+def edit_event(request, event_id):
+    event = get_object_or_404(Event, id=event_id)
 
-
-
-def edit_event(request, pk):
-    event = Event.objects.get(pk=pk)
     if request.method == 'POST':
-        event.name = request.POST.get('name')
-        event.date = request.POST.get('date')
-        event.end_date = request.POST.get('end_date')
-        event.place = request.POST.get('place')
-        event.category_id = request.POST.get('category')
-        event.department_id = request.POST.get('department')
-        event.responsible = request.POST.getlist('responsible')
-        event.comment = request.POST.get('comment')
-        event.save()  # Сохраняем изменения
-        messages.success(request, 'Мероприятие обновлено!')
-        return redirect('event_list')
-    return render(request, 'events/edit_event.html', {'event': event})
+        form = EventForm(request.POST, instance=event)
+        if form.is_valid():
+            form.save()
+            return redirect('events_ui')
+    else:
+        form = EventForm(instance=event)
 
-
+    return render(request, 'events/edit_event.html', {
+        'form': form,
+        'event': event,
+        'title': 'Редактирование мероприятия'
+    })
 
 
 def export_events_to_excel(request):
@@ -110,13 +101,34 @@ def export_events_to_excel(request):
     response['Content-Disposition'] = 'attachment; filename="events_export.xlsx"'
     return response
 
-from django.contrib.auth.decorators import login_required
+
+def bulk_delete_events(request):
+    if request.method == 'POST':
+        selected_events = request.POST.getlist('selected_events')
+        if selected_events:
+            try:
+                # Преобразуем строки в числа
+                event_ids = [int(id) for id in selected_events]
+                # Удаляем мероприятия
+                Event.objects.filter(id__in=event_ids).delete()
+
+                # Сообщение об успехе
+                from django.contrib import messages
+                count = len(selected_events)
+                if count == 1:
+                    messages.success(request, 'Мероприятие успешно удалено!')
+                else:
+                    messages.success(request, f'{count} мероприятий успешно удалено!')
+
+            except (ValueError, Event.DoesNotExist):
+                messages.error(request, 'Ошибка при удалении мероприятий')
+
+        return redirect('events_ui')
+
+    return redirect('events_ui')
 
 
 
-
-
-@login_required
 def events_ui(request):
     month = request.GET.get('month')
     year = request.GET.get('year')
@@ -149,7 +161,7 @@ def events_ui(request):
 
 
 
-    paginator = Paginator(events, 30)
+    paginator = Paginator(events, 15)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -226,26 +238,3 @@ def export_selected_events(request):
         )
         response['Content-Disposition'] = 'attachment; filename="events_export.xlsx"'
         return response
-
-
-def login_view(request):
-    if request.method == "POST":
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-
-        user = authenticate(request, username=username, password=password)
-
-        if user is not None:
-            login(request, user)
-            return redirect('events_ui')
-        else:
-            messages.error(request, "Неверный логин или пароль")
-
-    return render(request, 'login.html')
-
-
-def logout_view(request):
-    if request.method == 'POST':
-        logout(request)
-        return redirect('login')
-    return redirect('events_ui')
