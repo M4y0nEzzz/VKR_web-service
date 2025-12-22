@@ -11,4 +11,5 @@ urlpatterns = [
     path('bulk-delete/', views.bulk_delete_events, name='bulk_delete_events'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('check-db/', views.check_database, name='check_database'),
+    path('get-filtered-ids/', views.get_filtered_event_ids, name='get_filtered_event_ids'),
 ]

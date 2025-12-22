@@ -1,25 +1,23 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="edit-event-container">
-  <div class="edit-event-header">
+<div class="event-form-container">
+  <div class="event-form-header">
     <h1 class="page-title">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 10px; vertical-align: middle;">
         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
       </svg>
-      {% if event %}Редактирование мероприятия{% else %}Создание мероприятия{% endif %}
+      Редактирование мероприятия
     </h1>
-    {% if event %}
     <div class="event-id">
       <span class="id-label">ID:</span>
       <span class="id-value">{{ event.id }}</span>
     </div>
-    {% endif %}
   </div>
 
-  <div class="edit-event-card">
-    <form method="POST" class="edit-event-form">
+  <div class="event-form-card">
+    <form method="POST" class="event-form">
       {% csrf_token %}
 
       <!-- Основная информация -->
@@ -51,7 +49,7 @@
         </div>
       </div>
 
-      <!-- Даты и время -->
+      <!-- Даты и время (множественный выбор) -->
       <div class="form-section">
         <h2 class="section-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; vertical-align: middle;">
@@ -59,58 +57,33 @@
             <polyline points="12 6 12 12 16 14"></polyline>
           </svg>
           Даты и время
+          <span class="dates-count-badge" id="datesCount">(1 дата)</span>
         </h2>
-        <div class="form-grid date-grid">
-          <div class="form-group">
-            <label class="form-label">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-              </svg>
-              Дата и время начала
-            </label>
-            <div class="datetime-container">
-              {{ form.date }}
-              <button type="button" class="datetime-btn" onclick="showCalendar('id_date')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-              </button>
-            </div>
-            {% if form.date.errors %}
-              <div class="error-message">{{ form.date.errors }}</div>
-            {% endif %}
-          </div>
 
-          <div class="form-group">
-            <label class="form-label">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-              Дата и время окончания
-            </label>
-            <div class="datetime-container">
-              {{ form.end_date }}
-              <button type="button" class="datetime-btn" onclick="showCalendar('id_end_date')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-              </button>
-            </div>
-            {% if form.end_date.errors %}
-              <div class="error-message">{{ form.end_date.errors }}</div>
-            {% endif %}
-          </div>
+        <div class="dates-container" id="datesContainer">
+          <!-- Блоки дат будут вставлены здесь через JavaScript -->
         </div>
+
+        <div class="dates-actions">
+          <button type="button" class="btn btn-secondary" onclick="addDateRange()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Добавить дату
+          </button>
+
+          <button type="button" class="btn btn-secondary" onclick="duplicateLastDate()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Дублировать последнюю
+          </button>
+        </div>
+
+        <!-- Скрытые поля для хранения JSON с датами -->
+        <input type="hidden" name="dates_json" id="datesJson" value="[]">
       </div>
 
       <!-- Категория и подразделение -->
@@ -227,7 +200,7 @@
             <polyline points="17 21 17 13 7 13 7 21"></polyline>
             <polyline points="7 3 7 8 15 8"></polyline>
           </svg>
-          {% if event %}Сохранить изменения{% else %}Создать мероприятие{% endif %}
+          Сохранить изменения
         </button>
         <a href="{% url 'events_ui' %}" class="btn btn-secondary">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; vertical-align: middle;">
@@ -236,7 +209,6 @@
           </svg>
           Отмена
         </a>
-        {% if event %}
         <button type="button" class="btn btn-danger" onclick="confirmDelete()">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; vertical-align: middle;">
             <polyline points="3 6 5 6 21 6"></polyline>
@@ -246,7 +218,6 @@
           </svg>
           Удалить
         </button>
-        {% endif %}
       </div>
     </form>
   </div>
@@ -312,23 +283,24 @@ let selectedDay = null;
 function showCalendar(fieldId) {
   currentField = document.getElementById(fieldId);
 
-  // Если в поле уже есть значение, используем его
-  if (currentField.value) {
-    const [datePart, timePart] = currentField.value.split('T');
-    if (datePart) {
-      const [year, month, day] = datePart.split('-');
-      currentDate = new Date(year, month - 1, day);
+  if (currentField) {
+    // Если в поле уже есть значение, используем его
+    if (currentField.value) {
+      const [datePart, timePart] = currentField.value.split('T');
+      if (datePart) {
+        const [year, month, day] = datePart.split('-');
+        currentDate = new Date(year, month - 1, day);
+      }
+      if (timePart) {
+        const [hours, minutes] = timePart.split(':');
+        document.getElementById('calendarHour').value = parseInt(hours) || 12;
+        document.getElementById('calendarMinute').value = parseInt(minutes) || 0;
+      }
+    } else {
+      currentDate = new Date();
+      document.getElementById('calendarHour').value = currentDate.getHours();
+      document.getElementById('calendarMinute').value = currentDate.getMinutes();
     }
-    if (timePart) {
-      const [hours, minutes] = timePart.split(':');
-      document.getElementById('calendarHour').value = parseInt(hours) || 12;
-      document.getElementById('calendarMinute').value = parseInt(minutes) || 0;
-    }
-  } else {
-    // Если создаем новое мероприятие, устанавливаем текущую дату
-    currentDate = new Date();
-    document.getElementById('calendarHour').value = currentDate.getHours();
-    document.getElementById('calendarMinute').value = currentDate.getMinutes();
   }
 
   updateCalendar();
@@ -398,7 +370,7 @@ function updateCalendar() {
 
     dayElement.textContent = tempDate.getDate();
     dayElement.dataset.date = tempDate.toISOString().split('T')[0];
-    dayElement.dataset.fullDate = tempDate.toISOString(); // Сохраняем полную дату
+    dayElement.dataset.fullDate = tempDate.toISOString();
 
     dayElement.addEventListener('click', () => {
       // Убираем выделение со всех дней
@@ -422,7 +394,7 @@ function updateCalendar() {
 function changeMonth(delta) {
   currentDate.setMonth(currentDate.getMonth() + delta);
   updateCalendar();
-  selectedDay = null; // Сбрасываем выбранный день при смене месяца
+  selectedDay = null;
 }
 
 function setCurrentTime() {
@@ -432,7 +404,6 @@ function setCurrentTime() {
   currentDate = new Date(now);
   updateCalendar();
 
-  // Выделяем сегодняшний день
   setTimeout(() => {
     const today = new Date();
     const todayString = today.toISOString().split('T')[0];
@@ -448,146 +419,383 @@ function setCurrentTime() {
 }
 
 function setSelectedDateTime() {
-  if (!currentField) return;
+  if (window.calendarForDate) {
+    // Для динамических дат
+    const { id, field } = window.calendarForDate;
+    const hour = document.getElementById('calendarHour').value.padStart(2, '0');
+    const minute = document.getElementById('calendarMinute').value.padStart(2, '0');
+    const year = currentDate.getFullYear();
+    const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+    const day = currentDate.getDate().toString().padStart(2, '0');
 
-  const hour = document.getElementById('calendarHour').value.padStart(2, '0');
-  const minute = document.getElementById('calendarMinute').value.padStart(2, '0');
+    const dateTime = `${year}-${month}-${day}T${hour}:${minute}`;
+    updateDateRange(id, field, dateTime);
 
-  // Используем дату из currentDate (она обновляется при выборе дня)
-  const year = currentDate.getFullYear();
-  const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
-  const day = currentDate.getDate().toString().padStart(2, '0');
+    const input = document.querySelector(`.date-range-item[data-id="${id}"] .date-${field}-input`);
+    if (input) {
+      input.value = dateTime;
+    }
 
-  currentField.value = `${year}-${month}-${day}T${hour}:${minute}`;
-  console.log('Установлена дата:', currentField.value); // Для отладки
-  closeCalendar();
-}
+    window.calendarForDate = null;
+    closeCalendar();
+  } else if (currentField) {
+    // Для обычных полей
+    const hour = document.getElementById('calendarHour').value.padStart(2, '0');
+    const minute = document.getElementById('calendarMinute').value.padStart(2, '0');
+    const year = currentDate.getFullYear();
+    const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+    const day = currentDate.getDate().toString().padStart(2, '0');
 
-// Автоматически установить текущую дату при создании мероприятия
-{% if not event %}
-document.addEventListener('DOMContentLoaded', function() {
-  const now = new Date();
-  const startField = document.getElementById('id_date');
-  const endField = document.getElementById('id_end_date');
-
-  if (startField && !startField.value) {
-    // Устанавливаем начало через час от текущего времени
-    const startTime = new Date(now.getTime() + 60 * 60 * 1000);
-    const year = startTime.getFullYear();
-    const month = (startTime.getMonth() + 1).toString().padStart(2, '0');
-    const day = startTime.getDate().toString().padStart(2, '0');
-    const hours = startTime.getHours().toString().padStart(2, '0');
-    const minutes = startTime.getMinutes().toString().padStart(2, '0');
-
-    startField.value = `${year}-${month}-${day}T${hours}:${minutes}`;
-  }
-
-  if (endField && !endField.value) {
-    // Устанавливаем окончание через 2 часа от начала
-    const startTime = startField.value ? new Date(startField.value) : new Date(now.getTime() + 60 * 60 * 1000);
-    const endTime = new Date(startTime.getTime() + 2 * 60 * 60 * 1000);
-    const year = endTime.getFullYear();
-    const month = (endTime.getMonth() + 1).toString().padStart(2, '0');
-    const day = endTime.getDate().toString().padStart(2, '0');
-    const hours = endTime.getHours().toString().padStart(2, '0');
-    const minutes = endTime.getMinutes().toString().padStart(2, '0');
-
-    endField.value = `${year}-${month}-${day}T${hours}:${minutes}`;
-  }
-});
-{% endif %}
-
-// Закрытие календаря при клике вне его
-window.addEventListener('click', (event) => {
-  const modal = document.getElementById('calendarModal');
-  if (event.target === modal) {
+    currentField.value = `${year}-${month}-${day}T${hour}:${minute}`;
     closeCalendar();
   }
+}
+
+// Управление множественными датами
+let dateRanges = [];
+
+// Инициализация дат при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+  initializeDates();
+
+  // Обновляем календарь
+  updateCalendar();
 });
 
-// Валидация времени
-document.getElementById('calendarHour').addEventListener('input', function() {
-  let value = parseInt(this.value) || 0;
-  if (value < 0) this.value = 0;
-  if (value > 23) this.value = 23;
-  if (this.value.length > 2) this.value = this.value.slice(0, 2);
-});
+function initializeDates() {
+  const datesContainer = document.getElementById('datesContainer');
+  const datesJsonInput = document.getElementById('datesJson');
 
-document.getElementById('calendarMinute').addEventListener('input', function() {
-  let value = parseInt(this.value) || 0;
-  if (value < 0) this.value = 0;
-  if (value > 59) this.value = 59;
-  if (this.value.length > 2) this.value = this.value.slice(0, 2);
-});
+  // Очищаем контейнер
+  datesContainer.innerHTML = '';
 
-// Быстрый выбор времени
-document.getElementById('calendarHour').addEventListener('change', function() {
-  if (this.value === '') this.value = '12';
-  this.value = this.value.padStart(2, '0');
-});
+  // Пытаемся извлечь даты из комментария (если они там сохранены)
+  let extractedDates = extractDatesFromComment();
 
-document.getElementById('calendarMinute').addEventListener('change', function() {
-  if (this.value === '') this.value = '00';
-  this.value = this.value.padStart(2, '0');
-});
+  if (extractedDates.length > 0) {
+    // Используем даты из комментария
+    dateRanges = extractedDates;
+  } else {
+    // Используем основные поля формы
+    const startField = document.getElementById('id_date');
+    const endField = document.getElementById('id_end_date');
+
+    if (startField && endField && startField.value && endField.value) {
+      dateRanges = [{
+        start: startField.value,
+        end: endField.value,
+        id: generateId()
+      }];
+    } else {
+      // Создаем первую дату по умолчанию
+      const now = new Date();
+      const startTime = new Date(now.getTime() + 60 * 60 * 1000);
+      const endTime = new Date(startTime.getTime() + 2 * 60 * 60 * 1000);
+
+      dateRanges = [{
+        start: formatDateTime(startTime),
+        end: formatDateTime(endTime),
+        id: generateId()
+      }];
+    }
+  }
+
+  // Рендерим все даты
+  renderAllDates();
+
+  // Обновляем счетчик
+  updateDatesCount();
+
+  // Сохраняем в скрытое поле
+  saveDatesToJson();
+}
+
+function extractDatesFromComment() {
+  const commentField = document.getElementById('id_comment');
+  if (!commentField || !commentField.value) return [];
+
+  const comment = commentField.value;
+  const dates = [];
+
+  // Ищем даты в формате "ДАТЫ:" в комментарии
+  const dateSectionIndex = comment.indexOf('ДАТЫ:');
+  if (dateSectionIndex === -1) return [];
+
+  // Получаем все строки после "ДАТЫ:"
+  const dateLines = comment.substring(dateSectionIndex).split('\n');
+
+  for (const line of dateLines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed === 'ДАТЫ:') continue;
+
+    // Пытаемся распарсить строку вида "2032-12-22T19:32 - 2032-12-22T21:32"
+    // или "2032-12-22T19:32 — 2032-12-22T21:32"
+    const match = trimmed.match(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})\s*[—\-]\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+    if (match) {
+      dates.push({
+        start: match[1],
+        end: match[2],
+        id: generateId()
+      });
+    }
+  }
+
+  return dates;
+}
+
+function addDateRange() {
+  const lastRange = dateRanges[dateRanges.length - 1];
+  let newStart, newEnd;
+
+  if (lastRange) {
+    const lastEnd = new Date(lastRange.end);
+    newStart = new Date(lastEnd.getTime() + 24 * 60 * 60 * 1000);
+    newEnd = new Date(newStart.getTime() + 2 * 60 * 60 * 1000);
+  } else {
+    const now = new Date();
+    newStart = new Date(now.getTime() + 60 * 60 * 1000);
+    newEnd = new Date(newStart.getTime() + 2 * 60 * 60 * 1000);
+  }
+
+  dateRanges.push({
+    start: formatDateTime(newStart),
+    end: formatDateTime(newEnd),
+    id: generateId()
+  });
+
+  renderAllDates();
+  updateDatesCount();
+  saveDatesToJson();
+}
+
+function duplicateLastDate() {
+  if (dateRanges.length === 0) {
+    addDateRange();
+    return;
+  }
+
+  const lastRange = dateRanges[dateRanges.length - 1];
+  const newStart = new Date(lastRange.start);
+  const newEnd = new Date(lastRange.end);
+
+  newStart.setDate(newStart.getDate() + 1);
+  newEnd.setDate(newEnd.getDate() + 1);
+
+  dateRanges.push({
+    start: formatDateTime(newStart),
+    end: formatDateTime(newEnd),
+    id: generateId()
+  });
+
+  renderAllDates();
+  updateDatesCount();
+  saveDatesToJson();
+}
+
+function removeDateRange(id) {
+  if (dateRanges.length <= 1) {
+    alert('Мероприятие должно иметь хотя бы одну дату');
+    return;
+  }
+
+  dateRanges = dateRanges.filter(range => range.id !== id);
+  renderAllDates();
+  updateDatesCount();
+  saveDatesToJson();
+}
+
+function renderAllDates() {
+  const datesContainer = document.getElementById('datesContainer');
+  datesContainer.innerHTML = '';
+
+  dateRanges.forEach((range, index) => {
+    const dateElement = createDateElement(range, index);
+    datesContainer.appendChild(dateElement);
+  });
+}
+
+function createDateElement(range, index) {
+  const div = document.createElement('div');
+  div.className = 'date-range-item';
+  div.dataset.id = range.id;
+
+  div.innerHTML = `
+    <div class="date-range-header">
+      <h4>Дата ${index + 1}</h4>
+      ${index > 0 ? `
+        <button type="button" class="remove-date-btn" onclick="removeDateRange('${range.id}')" title="Удалить дату">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      ` : ''}
+    </div>
+    <div class="date-range-grid">
+      <div class="form-group">
+        <label class="form-label">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          Дата и время начала
+        </label>
+        <div class="datetime-container">
+          <input type="datetime-local"
+                 class="date-start-input"
+                 value="${range.start}"
+                 onchange="updateDateRange('${range.id}', 'start', this.value)">
+          <button type="button" class="datetime-btn" onclick="showCalendarForDate('${range.id}', 'start')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          Дата и время окончания
+        </label>
+        <div class="datetime-container">
+          <input type="datetime-local"
+                 class="date-end-input"
+                 value="${range.end}"
+                 onchange="updateDateRange('${range.id}', 'end', this.value)">
+          <button type="button" class="datetime-btn" onclick="showCalendarForDate('${range.id}', 'end')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  return div;
+}
+
+function updateDateRange(id, field, value) {
+  const range = dateRanges.find(r => r.id === id);
+  if (range) {
+    range[field] = value;
+    saveDatesToJson();
+  }
+}
+
+function showCalendarForDate(id, field) {
+  const range = dateRanges.find(r => r.id === id);
+  if (!range) return;
+
+  // Сохраняем информацию о том, для какого поля открываем календарь
+  window.calendarForDate = { id, field };
+
+  // Устанавливаем текущее значение в календарь
+  const value = range[field];
+  currentField = null;
+
+  if (value) {
+    const [datePart, timePart] = value.split('T');
+    if (datePart) {
+      const [year, month, day] = datePart.split('-');
+      currentDate = new Date(year, month - 1, day);
+    }
+    if (timePart) {
+      const [hours, minutes] = timePart.split(':');
+      document.getElementById('calendarHour').value = parseInt(hours) || 12;
+      document.getElementById('calendarMinute').value = parseInt(minutes) || 0;
+    }
+  } else {
+    currentDate = new Date();
+    document.getElementById('calendarHour').value = currentDate.getHours();
+    document.getElementById('calendarMinute').value = currentDate.getMinutes();
+  }
+
+  updateCalendar();
+  document.getElementById('calendarModal').style.display = 'block';
+}
+
+function updateDatesCount() {
+  const countElement = document.getElementById('datesCount');
+  if (countElement) {
+    const count = dateRanges.length;
+    countElement.textContent = `(${count} ${getRussianPlural(count, ['дата', 'даты', 'дат'])})`;
+  }
+}
+
+function saveDatesToJson() {
+  const datesJsonInput = document.getElementById('datesJson');
+  if (datesJsonInput) {
+    datesJsonInput.value = JSON.stringify(dateRanges);
+  }
+}
+
+// Вспомогательные функции
+function generateId() {
+  return 'date_' + Math.random().toString(36).substr(2, 9);
+}
+
+function formatDateTime(date) {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function formatDateForDisplay(dateTimeString) {
+  // Конвертируем строку "2032-12-22T19:32" в формат "22.12.2032 19:32"
+  const [datePart, timePart] = dateTimeString.split('T');
+  if (!datePart || !timePart) return dateTimeString;
+
+  const [year, month, day] = datePart.split('-');
+  const [hours, minutes] = timePart.split(':');
+
+  return `${day}.${month}.${year} ${hours}:${minutes}`;
+}
+
+
+
+
+
+function getRussianPlural(number, words) {
+  const cases = [2, 0, 1, 1, 1, 2];
+  return words[(number % 100 > 4 && number % 100 < 20) ? 2 : cases[(number % 10 < 5) ? number % 10 : 5]];
+}
 
 // Функция удаления
-{% if event %}
 function confirmDelete() {
   if (confirm('Вы уверены, что хотите удалить это мероприятие? Это действие нельзя отменить.')) {
     window.location.href = "{% url 'delete_event' event.id %}";
   }
 }
-{% endif %}
 
-// Инициализация календаря при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
-  updateCalendar();
-
-  // Добавляем обработчики для быстрого выбора времени
-  const hourInput = document.getElementById('calendarHour');
-  const minuteInput = document.getElementById('calendarMinute');
-
-  // Увеличить/уменьшить часы стрелками
-  hourInput.addEventListener('keydown', function(e) {
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      let value = parseInt(this.value) || 0;
-      value = (value + 1) % 24;
-      this.value = value.toString().padStart(2, '0');
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      let value = parseInt(this.value) || 0;
-      value = (value - 1 + 24) % 24;
-      this.value = value.toString().padStart(2, '0');
-    }
-  });
-
-  // Увеличить/уменьшить минуты стрелками
-  minuteInput.addEventListener('keydown', function(e) {
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      let value = parseInt(this.value) || 0;
-      value = (value + 1) % 60;
-      this.value = value.toString().padStart(2, '0');
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      let value = parseInt(this.value) || 0;
-      value = (value - 1 + 60) % 60;
-      this.value = value.toString().padStart(2, '0');
-    }
-  });
-});
+// Инициализация календаря
+updateCalendar();
 </script>
 
 <style>
-.edit-event-container {
+.event-form-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
 }
 
-.edit-event-header {
+.event-form-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -634,7 +842,7 @@ document.addEventListener('DOMContentLoaded', function() {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 }
 
-.edit-event-card {
+.event-form-card {
   background: linear-gradient(145deg, #2c3e50, #34495e);
   border-radius: 16px;
   padding: 40px;
@@ -644,7 +852,7 @@ document.addEventListener('DOMContentLoaded', function() {
   overflow: hidden;
 }
 
-.edit-event-card::before {
+.event-form-card::before {
   content: '';
   position: absolute;
   top: 0;
@@ -654,7 +862,7 @@ document.addEventListener('DOMContentLoaded', function() {
   background: linear-gradient(to bottom, #1abc9c, #3498db);
 }
 
-.edit-event-form {
+.event-form {
   display: flex;
   flex-direction: column;
   gap: 30px;
@@ -730,6 +938,7 @@ document.addEventListener('DOMContentLoaded', function() {
 .datetime-container input[type="datetime-local"] {
   flex: 1;
   padding-right: 50px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .datetime-btn {
@@ -747,6 +956,7 @@ document.addEventListener('DOMContentLoaded', function() {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 2;
 }
 
 .datetime-btn:hover {
@@ -760,13 +970,13 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 /* Стили для полей формы */
-.edit-event-form input[type="text"],
-.edit-event-form input[type="email"],
-.edit-event-form input[type="password"],
-.edit-event-form input[type="date"],
-.edit-event-form input[type="datetime-local"],
-.edit-event-form textarea,
-.edit-event-form select {
+.event-form input[type="text"],
+.event-form input[type="email"],
+.event-form input[type="password"],
+.event-form input[type="date"],
+.event-form input[type="datetime-local"],
+.event-form textarea,
+.event-form select {
   width: 100%;
   padding: 14px 16px;
   background: #1a2530;
@@ -779,55 +989,31 @@ document.addEventListener('DOMContentLoaded', function() {
   outline: none;
 }
 
-.edit-event-form input[type="text"]:focus,
-.edit-event-form input[type="email"]:focus,
-.edit-event-form input[type="password"]:focus,
-.edit-event-form input[type="date"]:focus,
-.edit-event-form input[type="datetime-local"]:focus,
-.edit-event-form textarea:focus,
-.edit-event-form select:focus {
+.event-form input[type="text"]:focus,
+.event-form input[type="email"]:focus,
+.event-form input[type="password"]:focus,
+.event-form input[type="date"]:focus,
+.event-form input[type="datetime-local"]:focus,
+.event-form textarea:focus,
+.event-form select:focus {
   border-color: #1abc9c;
   box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.2);
   background: #1f2b38;
 }
 
-.edit-event-form textarea {
+.event-form textarea {
   min-height: 120px;
   resize: vertical;
   line-height: 1.5;
 }
 
-.edit-event-form select {
+.event-form select {
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2395a5a6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 16px center;
   background-size: 16px;
   padding-right: 45px;
-}
-
-/* Множественный выбор */
-.edit-event-form select[multiple] {
-  background-image: none;
-  padding-right: 16px;
-  height: auto;
-  min-height: 120px;
-}
-
-.edit-event-form select[multiple] option {
-  padding: 8px 12px;
-  margin: 2px 0;
-  background: #2c3e50;
-  border-radius: 4px;
-}
-
-.edit-event-form select[multiple] option:hover {
-  background: #3498db;
-}
-
-.edit-event-form select[multiple] option:checked {
-  background: #1abc9c;
-  color: white;
 }
 
 .error-message {
@@ -1121,26 +1307,135 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 }
 
-.edit-event-card {
+.event-form-card {
   animation: fadeIn 0.5s ease-out;
 }
 
-/* Кастомные стили для даты и времени */
-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  opacity: 0;
-  position: absolute;
-  width: 100%;
-  height: 100%;
+/* Стили для множественных дат */
+.dates-count-badge {
+  background: rgba(26, 188, 156, 0.2);
+  color: #1abc9c;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  margin-left: 10px;
+  border: 1px solid rgba(26, 188, 156, 0.3);
+}
+
+.dates-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.date-range-item {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.date-range-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(26, 188, 156, 0.2);
+}
+
+.date-range-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.date-range-header h4 {
+  margin: 0;
+  color: #ecf0f1;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.remove-date-btn {
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  border-radius: 6px;
+  color: #e74c3c;
+  padding: 6px 10px;
   cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-date-btn:hover {
+  background: rgba(231, 76, 60, 0.2);
+  border-color: #e74c3c;
+  transform: scale(1.05);
+}
+
+.date-range-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.dates-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.dates-actions .btn {
+  min-width: auto;
+  padding: 10px 16px;
+}
+
+.dates-actions .btn svg {
+  margin-right: 6px;
+}
+
+/* Стили для динамических полей ввода даты */
+.date-start-input,
+.date-end-input {
+  width: 100%;
+  padding: 14px 16px;
+  background: #1a2530;
+  border: 2px solid #4a5f7a;
+  border-radius: 10px;
+  color: #ecf0f1;
+  font-size: 16px;
+  font-family: inherit;
+  transition: all 0.3s ease;
+  outline: none;
+  padding-right: 50px;
+}
+
+.date-start-input:focus,
+.date-end-input:focus {
+  border-color: #1abc9c;
+  box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.2);
+  background: #1f2b38;
+}
+
+/* Скрываем оригинальные поля дат */
+#id_date,
+#id_end_date {
+  display: none !important;
 }
 
 /* Адаптивность */
 @media (max-width: 768px) {
-  .edit-event-container {
+  .event-form-container {
     padding: 10px;
   }
 
-  .edit-event-header {
+  .event-form-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 15px;
@@ -1150,7 +1445,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     font-size: 24px;
   }
 
-  .edit-event-card {
+  .event-form-card {
     padding: 20px;
   }
 
@@ -1191,13 +1486,13 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     font-size: 18px;
   }
 
-  .edit-event-form input[type="text"],
-  .edit-event-form input[type="email"],
-  .edit-event-form input[type="password"],
-  .edit-event-form input[type="date"],
-  .edit-event-form input[type="datetime-local"],
-  .edit-event-form textarea,
-  .edit-event-form select {
+  .event-form input[type="text"],
+  .event-form input[type="email"],
+  .event-form input[type="password"],
+  .event-form input[type="date"],
+  .event-form input[type="datetime-local"],
+  .event-form textarea,
+  .event-form select {
     padding: 12px 14px;
     font-size: 15px;
   }
