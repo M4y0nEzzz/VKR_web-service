@@ -16,186 +16,196 @@
     </a>
   </div>
 
+  <!-- Фильтрация -->
   <form method="GET" action="{% url 'events_ui' %}">
-    <label for="month">Выберите месяц:</label>
-    <select name="month" id="month">
-      <option value="" {% if not month %}selected{% endif %}>Все</option>
-      <option value="1" {% if month == '1' %}selected{% endif %}>Январь</option>
-      <option value="2" {% if month == '2' %}selected{% endif %}>Февраль</option>
-      <option value="3" {% if month == '3' %}selected{% endif %}>Март</option>
-      <option value="4" {% if month == '4' %}selected{% endif %}>Апрель</option>
-      <option value="5" {% if month == '5' %}selected{% endif %}>Май</option>
-      <option value="6" {% if month == '6' %}selected{% endif %}>Июнь</option>
-      <option value="7" {% if month == '7' %}selected{% endif %}>Июль</option>
-      <option value="8" {% if month == '8' %}selected{% endif %}>Август</option>
-      <option value="9" {% if month == '9' %}selected{% endif %}>Сентябрь</option>
-      <option value="10" {% if month == '10' %}selected{% endif %}>Октябрь</option>
-      <option value="11" {% if month == '11' %}selected{% endif %}>Ноябрь</option>
-      <option value="12" {% if month == '12' %}selected{% endif %}>Декабрь</option>
-    </select>
-
-    <label for="year">Выберите год:</label>
-    <input type="text" name="year" id="year" value="{{ year }}">
-
+  <div class="filter-group">
+    <label for="month">Месяц (1-12):</label>
+    <input type="number" name="month" id="month"
+           value="{{ month|default:'' }}"
+           min="1" max="12"
+           placeholder="Месяц (1-12)">
+  </div>
+  <div class="filter-group">
+    <label for="year">Год:</label>
+    <input type="number" name="year" id="year"
+           value="{{ year|default:current_year }}"
+           min="2000" max="2100"
+           placeholder="Год">
+  </div>
+  <div class="filter-group">
     <label for="sort_order">Сортировка:</label>
     <select name="sort_order" id="sort_order">
-      <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>По возрастанию</option>
       <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>По убыванию</option>
+      <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>По возрастанию</option>
     </select>
+  </div>
 
-    <button type="submit">Фильтровать</button>
-  </form>
+  <button type="submit" class="filter-btn">Фильтровать</button>
 
-  <!-- Массовые действия -->
-  <div class="bulk-actions">
-    <form method="POST" action="{% url 'export_selected_events' %}" id="exportForm" style="display: inline-block;">
-      {% csrf_token %}
-      <button type="submit" class="export-btn">
+  {% if month or year %}
+    <a href="{% url 'events_ui' %}" class="clear-filters">Сбросить фильтры</a>
+  {% endif %}
+</form>
+
+<!-- Массовые действия -->
+<div class="bulk-actions">
+    <button type="button" class="export-btn" id="exportBtn">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="7 10 12 15 17 10"></polyline>
-          <line x1="12" y1="15" x2="12" y2="3"></line>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
         </svg>
         Экспортировать выбранные
-      </button>
-    </form>
+    </button>
 
-    <button type="button" class="delete-btn" onclick="showDeleteConfirm()" style="margin-left: 10px;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
-        <polyline points="3 6 5 6 21 6"></polyline>
-        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-        <line x1="10" y1="11" x2="10" y2="17"></line>
-        <line x1="14" y1="11" x2="14" y2="17"></line>
-      </svg>
-      Удалить выбранные
+    <button type="button" class="delete-btn" id="deleteBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+        </svg>
+        Удалить выбранные
     </button>
 
     <div class="selection-controls">
-      <button type="button" class="select-all-btn" onclick="toggleSelectAll()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
-          <polyline points="9 11 12 14 22 4"></polyline>
-          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-        </svg>
-        <span id="selectAllText">Выбрать все</span>
-      </button>
+        <button type="button" class="select-all-btn" id="selectAllBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+                <polyline points="9 11 12 14 22 4"></polyline>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+            <span id="selectAllText">Выбрать все</span>
+        </button>
 
-      <span class="selected-count" id="selectedCount">Выбрано: 0</span>
+        <span class="selected-count" id="selectedCount">Выбрано: 0</span>
     </div>
-  </div>
+</div>
 
-  <div class="events-list">
+
+
+<div class="events-list">
     {% for event in page_obj %}
-      <div class="event-card">
+    <div class="event-card">
         <div class="event-header">
-          <div class="event-title-section">
-            <h3 class="event-title">{{ event.name }}</h3>
-            <p class="event-date">{{ event.date|date:"d.m.Y H:i" }} — {{ event.end_date|date:"d.m.Y H:i" }}</p>
-          </div>
-          <div class="event-actions">
-            <a href="{% url 'edit_event' event.id %}" class="edit-icon" title="Редактировать мероприятие">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1abc9c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
-            </a>
-          </div>
+            <div class="event-title-section">
+                <h3 class="event-title">{{ event.name }}</h3>
+                <p class="event-date">{{ event.date|date:"d.m.Y H:i" }} — {{ event.end_date|date:"d.m.Y H:i" }}</p>
+            </div>
+            <div class="event-actions">
+                <a href="{% url 'edit_event' event.id %}" class="edit-icon" title="Редактировать мероприятие">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1abc9c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                </a>
+            </div>
         </div>
 
         <div class="event-details-grid">
-          <div class="detail-item">
-            <div class="detail-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-                <line x1="7" y1="7" x2="7.01" y2="7"></line>
-              </svg>
+            <div class="detail-item">
+                <div class="detail-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                    </svg>
+                </div>
+                <div class="detail-content">
+                    <span class="detail-label">Категория:</span>
+                    <span class="detail-value">{{ event.category.name|default:"—" }}</span>
+                </div>
             </div>
-            <div class="detail-content">
-              <span class="detail-label">Категория:</span>
-              <span class="detail-value">{{ event.category.name|default:"—" }}</span>
-            </div>
-          </div>
 
-          <div class="detail-item">
-            <div class="detail-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
-              </svg>
+            <div class="detail-item">
+                <div class="detail-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                </div>
+                <div class="detail-content">
+                    <span class="detail-label">Подразделение:</span>
+                    <span class="detail-value">{{ event.department.name|default:"—" }}</span>
+                </div>
             </div>
-            <div class="detail-content">
-              <span class="detail-label">Подразделение:</span>
-              <span class="detail-value">{{ event.department.name|default:"—" }}</span>
-            </div>
-          </div>
 
-          <div class="detail-item">
-            <div class="detail-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="4"></circle>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-              </svg>
+            <div class="detail-item">
+                <div class="detail-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                </div>
+                <div class="detail-content">
+                    <span class="detail-label">Ответственные:</span>
+                    <span class="detail-value">
+                        {% if event.responsible_list %}
+                        {{ event.responsible_list|join:", " }}
+                        {% else %}
+                        Нет ответственных
+                        {% endif %}
+                    </span>
+                </div>
             </div>
-            <div class="detail-content">
-              <span class="detail-label">Ответственные:</span>
-              <span class="detail-value">
-                {% if event.responsible_list %}
-                  {{ event.responsible_list|join:", " }}
-                {% else %}
-                  Нет ответственных
-                {% endif %}
-              </span>
-            </div>
-          </div>
 
-          <div class="detail-item">
-            <div class="detail-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f39c12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
-              </svg>
+            <div class="detail-item">
+                <div class="detail-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f39c12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                </div>
+                <div class="detail-content">
+                    <span class="detail-label">Место:</span>
+                    <span class="detail-value">{{ event.place|default:"—" }}</span>
+                </div>
             </div>
-            <div class="detail-content">
-              <span class="detail-label">Место:</span>
-              <span class="detail-value">{{ event.place|default:"—" }}</span>
-            </div>
-          </div>
 
-          <div class="detail-item full-width">
-            <div class="detail-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9b59b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-              </svg>
+            <div class="detail-item full-width">
+                <div class="detail-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9b59b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                    </svg>
+                </div>
+                <div class="detail-content">
+                    <span class="detail-label">Комментарий:</span>
+                    <span class="detail-value">{{ event.comment|default:"Нет комментария" }}</span>
+                </div>
             </div>
-            <div class="detail-content">
-              <span class="detail-label">Комментарий:</span>
-              <span class="detail-value">{{ event.comment|default:"Нет комментария" }}</span>
-            </div>
-          </div>
         </div>
 
         <div class="event-footer">
-          <div class="checkbox-container">
-            <input type="checkbox" name="selected_events" value="{{ event.id }}" id="event-{{ event.id }}" class="event-checkbox custom-checkbox" data-event-name="{{ event.name }}">
-            <label for="event-{{ event.id }}" class="checkbox-label">
-              <span class="checkmark"></span>
-              <span class="label-text">Выбрать мероприятие</span>
-            </label>
-          </div>
+            <div class="checkbox-container">
+                <input type="checkbox" name="selected_events" value="{{ event.id }}" id="event-{{ event.id }}" class="event-checkbox" data-event-name="{{ event.name }}">
+                <label for="event-{{ event.id }}" class="checkbox-label">
+                    <span class="checkmark"></span>
+                    <span class="label-text">Выбрать мероприятие</span>
+                </label>
+            </div>
         </div>
-      </div>
+    </div>
     {% empty %}
-      <div class="empty-state">
+    <div class="empty-state">
         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#95a5a6" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="8" x2="12" y2="12"></line>
-          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
         </svg>
         <p>Нет мероприятий для отображения</p>
-      </div>
+    </div>
     {% endfor %}
-  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
 
   <!-- Модальное окно подтверждения удаления -->
   <div id="deleteModal" class="modal">
@@ -220,64 +230,127 @@
 
   <div class="pagination">
     <span class="step-links">
-      {% if page_obj.has_previous %}
-        <a href="?page=1{% if month %}&month={{ month }}{% endif %}{% if year %}&year={{ year }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">&laquo; первая</a>
-        <a href="?page={{ page_obj.previous_page_number }}{% if month %}&month={{ month }}{% endif %}{% if year %}&year={{ year }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">предыдущая</a>
-      {% endif %}
+        {% if page_obj.has_previous %}
+            <a href="?page=1{% if month %}&month={{ month }}{% endif %}{% if year %}&year={{ year }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">&laquo; первая</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if month %}&month={{ month }}{% endif %}{% if year %}&year={{ year }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">предыдущая</a>
+        {% endif %}
 
-      <span class="current">
-        Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}.
-      </span>
+        <span class="current">
+            Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}.
+        </span>
 
-      {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if month %}&month={{ month }}{% endif %}{% if year %}&year={{ year }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">следующая</a>
-        <a href="?page={{ page_obj.paginator.num_pages }}{% if month %}&month={{ month }}{% endif %}{% if year %}&year={{ year }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">последняя &raquo;</a>
-      {% endif %}
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if month %}&month={{ month }}{% endif %}{% if year %}&year={{ year }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">следующая</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if month %}&month={{ month }}{% endif %}{% if year %}&year={{ year }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">последняя &raquo;</a>
+        {% endif %}
     </span>
-  </div>
+</div>
 
-  <script>
-  // Переменные для управления выбором
-  let isSelectAll = false;
-  let selectedEvents = new Set();
 
-  // Обновление счетчика выбранных мероприятий
-  function updateSelectedCount() {
-    const checkboxes = document.querySelectorAll('.event-checkbox:checked');
-    const count = checkboxes.length;
+<script>
+// Переменные для управления выбором
+let isSelectAll = false;
+
+// Переключение выбора всех мероприятий
+function toggleSelectAll() {
+    const checkboxes = document.querySelectorAll('.event-checkbox');
+
+    // Если ничего не выбрано или выбраны не все - выбираем все
+    const shouldSelectAll = !isSelectAll;
+
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = shouldSelectAll;
+    });
+
+    isSelectAll = shouldSelectAll;
+    updateSelectedCount();
+}
+
+// Обновление счетчика выбранных мероприятий
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.event-checkbox');
+    const checkedCheckboxes = document.querySelectorAll('.event-checkbox:checked');
+    const count = checkedCheckboxes.length;
+    const totalCheckboxes = checkboxes.length;
+
     document.getElementById('selectedCount').textContent = `Выбрано: ${count}`;
 
-    // Обновляем глобальный набор выбранных мероприятий
-    selectedEvents.clear();
-    checkboxes.forEach(checkbox => {
-      selectedEvents.add(checkbox.value);
-    });
+    // Обновляем флаг isSelectAll
+    isSelectAll = count > 0 && count === totalCheckboxes;
 
     // Обновляем текст кнопки "Выбрать все"
-    const totalEvents = document.querySelectorAll('.event-checkbox').length;
     document.getElementById('selectAllText').textContent =
-      isSelectAll ? 'Снять выделение' : 'Выбрать все';
-  }
+        isSelectAll ? 'Снять выделение' : 'Выбрать все';
 
-  // Переключение выбора всех мероприятий
-  function toggleSelectAll() {
+    // Обновляем состояние кнопок массовых действий
+    updateBulkActionsState(count);
+
+    // Обновляем визуальное состояние кастомных чекбоксов
+    updateCustomCheckboxes();
+}
+
+// Обновление визуального состояния кастомных чекбоксов
+function updateCustomCheckboxes() {
     const checkboxes = document.querySelectorAll('.event-checkbox');
-    isSelectAll = !isSelectAll;
-
     checkboxes.forEach(checkbox => {
-      checkbox.checked = isSelectAll;
+        const label = checkbox.nextElementSibling;
+        if (label && label.classList.contains('checkbox-label')) {
+            const checkmark = label.querySelector('.checkmark');
+            const labelText = label.querySelector('.label-text');
+
+            if (checkbox.checked) {
+                if (checkmark) {
+                    checkmark.style.backgroundColor = '#e74c3c';
+                    checkmark.style.borderColor = '#e74c3c';
+                }
+                if (labelText) {
+                    labelText.style.color = '#e74c3c';
+                    labelText.style.fontWeight = '600';
+                }
+            } else {
+                if (checkmark) {
+                    checkmark.style.backgroundColor = '';
+                    checkmark.style.borderColor = '#95a5a6';
+                }
+                if (labelText) {
+                    labelText.style.color = '#bdc3c7';
+                    labelText.style.fontWeight = '';
+                }
+            }
+        }
     });
+}
 
-    updateSelectedCount();
-  }
+// Обновление состояния кнопок массовых действий
+function updateBulkActionsState(selectedCount) {
+    const exportBtn = document.querySelector('.export-btn');
+    const deleteBtn = document.querySelector('.delete-btn');
 
-  // Показ модального окна подтверждения удаления
-  function showDeleteConfirm() {
+    const hasSelection = selectedCount > 0;
+
+    exportBtn.disabled = !hasSelection;
+    deleteBtn.disabled = !hasSelection;
+
+    if (!hasSelection) {
+        exportBtn.style.opacity = '0.6';
+        exportBtn.style.cursor = 'not-allowed';
+        deleteBtn.style.opacity = '0.6';
+        deleteBtn.style.cursor = 'not-allowed';
+    } else {
+        exportBtn.style.opacity = '1';
+        exportBtn.style.cursor = 'pointer';
+        deleteBtn.style.opacity = '1';
+        deleteBtn.style.cursor = 'pointer';
+    }
+}
+
+// Показ модального окна подтверждения удаления
+function showDeleteConfirm() {
     const checkboxes = document.querySelectorAll('.event-checkbox:checked');
 
     if (checkboxes.length === 0) {
-      alert('Пожалуйста, выберите хотя бы одно мероприятие для удаления');
-      return;
+        alert('Пожалуйста, выберите хотя бы одно мероприятие для удаления');
+        return;
     }
 
     const deleteMessage = document.getElementById('deleteMessage');
@@ -287,32 +360,52 @@
     eventsList.innerHTML = '';
 
     if (checkboxes.length === 1) {
-      const eventName = checkboxes[0].dataset.eventName;
-      deleteMessage.textContent = `Вы уверены, что хотите удалить мероприятие "${eventName}"?`;
-      eventsToDelete.style.display = 'none';
+        const eventName = checkboxes[0].dataset.eventName;
+        deleteMessage.textContent = `Вы уверены, что хотите удалить мероприятие "${eventName}"?`;
+        eventsToDelete.style.display = 'none';
     } else {
-      deleteMessage.textContent = `Вы уверены, что хотите удалить ${checkboxes.length} мероприятий?`;
-      eventsToDelete.style.display = 'block';
+        deleteMessage.textContent = `Вы уверены, что хотите удалить ${checkboxes.length} мероприятий?`;
+        eventsToDelete.style.display = 'block';
 
-      checkboxes.forEach(checkbox => {
-        const li = document.createElement('li');
-        li.textContent = checkbox.dataset.eventName;
-        eventsList.appendChild(li);
-      });
+        // Ограничиваем показ до 10 мероприятий для читаемости
+        const maxShown = 10;
+
+        checkboxes.forEach((checkbox, index) => {
+            if (index < maxShown) {
+                const li = document.createElement('li');
+                li.textContent = checkbox.dataset.eventName;
+                eventsList.appendChild(li);
+            }
+        });
+
+        // Показываем сколько еще мероприятий не отображается
+        if (checkboxes.length > maxShown) {
+            const li = document.createElement('li');
+            li.textContent = `... и еще ${checkboxes.length - maxShown} мероприятий`;
+            li.style.color = '#bdc3c7';
+            li.style.fontStyle = 'italic';
+            eventsList.appendChild(li);
+        }
     }
 
     document.getElementById('deleteModal').style.display = 'block';
-  }
+}
 
-  // Закрытие модального окна удаления
-  function closeDeleteModal() {
+// Закрытие модального окна удаления
+function closeDeleteModal() {
     document.getElementById('deleteModal').style.display = 'none';
-  }
+}
 
-  // Удаление выбранных мероприятий
-  function deleteSelectedEvents() {
+// Удаление выбранных мероприятий
+function deleteSelectedEvents() {
     const checkboxes = document.querySelectorAll('.event-checkbox:checked');
     const eventIds = Array.from(checkboxes).map(checkbox => checkbox.value);
+
+    // Показываем индикатор загрузки
+    const deleteBtn = document.querySelector('.delete-btn');
+    const originalText = deleteBtn.innerHTML;
+    deleteBtn.innerHTML = '<svg class="spinner" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/></svg> Удаление...';
+    deleteBtn.disabled = true;
 
     // Создаем скрытую форму для отправки данных
     const form = document.createElement('form');
@@ -326,71 +419,221 @@
     form.appendChild(csrfToken);
 
     eventIds.forEach(id => {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = 'selected_events';
-      input.value = id;
-      form.appendChild(input);
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'selected_events';
+        input.value = id;
+        form.appendChild(input);
     });
 
     document.body.appendChild(form);
     form.submit();
-  }
+}
 
-  // Закрытие модального окна при клике вне его
-  window.addEventListener('click', (event) => {
+// Экспорт выбранных мероприятий
+function exportSelectedEvents(e) {
+    e.preventDefault();
+
+    const checkboxes = document.querySelectorAll('.event-checkbox:checked');
+    if (checkboxes.length === 0) {
+        alert('Пожалуйста, выберите хотя бы одно мероприятие для экспорта');
+        return;
+    }
+
+    // Показываем индикатор загрузки
+    const exportBtn = document.querySelector('.export-btn');
+    const originalText = exportBtn.innerHTML;
+    exportBtn.innerHTML = '<svg class="spinner" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/></svg> Экспорт...';
+    exportBtn.disabled = true;
+
+    // Создаем скрытую форму для отправки данных
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = "{% url 'export_selected_events' %}";
+    form.style.display = 'none';
+
+    const csrfToken = document.createElement('input');
+    csrfToken.type = 'hidden';
+    csrfToken.name = 'csrfmiddlewaretoken';
+    csrfToken.value = '{{ csrf_token }}';
+    form.appendChild(csrfToken);
+
+    checkboxes.forEach(checkbox => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'selected_events';
+        input.value = checkbox.value;
+        form.appendChild(input);
+    });
+
+    // Создаем iframe для скачивания файла
+    const iframe = document.createElement('iframe');
+    iframe.name = 'downloadFrame';
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    form.target = 'downloadFrame';
+
+    document.body.appendChild(form);
+    form.submit();
+
+    // Восстанавливаем кнопку через 2 секунды
+    setTimeout(() => {
+        exportBtn.innerHTML = originalText;
+        exportBtn.disabled = false;
+        updateBulkActionsState(checkboxes.length);
+    }, 2000);
+
+    // Убираем форму и iframe после отправки
+    setTimeout(() => {
+        if (form.parentNode) form.parentNode.removeChild(form);
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    }, 3000);
+}
+
+// Закрытие модального окна при клике вне его
+window.addEventListener('click', (event) => {
     const modal = document.getElementById('deleteModal');
     if (event.target === modal) {
-      closeDeleteModal();
+        closeDeleteModal();
     }
-  });
+});
 
-  // Инициализация при загрузке страницы
-  document.addEventListener('DOMContentLoaded', function() {
+// Закрытие модального окна при нажатии Escape
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        closeDeleteModal();
+    }
+});
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
     // Добавляем обработчики изменения для всех чекбоксов
     const checkboxes = document.querySelectorAll('.event-checkbox');
     checkboxes.forEach(checkbox => {
-      checkbox.addEventListener('change', updateSelectedCount);
+        checkbox.addEventListener('change', updateSelectedCount);
     });
 
-    // Инициализируем счетчик
+    // Инициализируем счетчик и состояние чекбоксов
     updateSelectedCount();
 
-    // Обработчик для формы экспорта
-    const exportForm = document.getElementById('exportForm');
-    exportForm.addEventListener('submit', function(e) {
-      const checkboxes = document.querySelectorAll('.event-checkbox:checked');
-      if (checkboxes.length === 0) {
-        e.preventDefault();
-        alert('Пожалуйста, выберите хотя бы одно мероприятие для экспорта');
-        return;
-      }
+    // Назначаем обработчики для кнопок
+    const exportBtn = document.querySelector('.export-btn');
+    const deleteBtn = document.querySelector('.delete-btn');
+    const selectAllBtn = document.querySelector('.select-all-btn');
 
-      // Добавляем выбранные мероприятия в форму экспорта
-      const formData = new FormData(this);
-      checkboxes.forEach(checkbox => {
-        formData.append('selected_events', checkbox.value);
-      });
+    if (exportBtn) exportBtn.addEventListener('click', exportSelectedEvents);
+    if (deleteBtn) deleteBtn.addEventListener('click', showDeleteConfirm);
+    if (selectAllBtn) selectAllBtn.addEventListener('click', toggleSelectAll);
 
-      // Заменяем данные формы
-      const newForm = document.createElement('form');
-      newForm.method = 'POST';
-      newForm.action = this.action;
+    const closeModalBtn = document.querySelector('.close-modal');
+    const confirmDeleteBtn = document.querySelector('.btn-danger');
+    const cancelDeleteBtn = document.querySelector('.btn-secondary');
 
-      for (let [key, value] of formData) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = key;
-        input.value = value;
-        newForm.appendChild(input);
-      }
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeDeleteModal);
+    if (confirmDeleteBtn) confirmDeleteBtn.addEventListener('click', deleteSelectedEvents);
+    if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', closeDeleteModal);
 
-      document.body.appendChild(newForm);
-      newForm.submit();
-      e.preventDefault();
+    // Добавляем стиль для спиннера
+    const style = document.createElement('style');
+    style.textContent = `
+        .spinner {
+            animation: rotate 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .export-btn:disabled:hover,
+        .delete-btn:disabled:hover {
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .event-checkbox {
+            position: absolute;
+            opacity: 0;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            z-index: 1;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+            color: #bdc3c7;
+            transition: color 0.3s ease;
+            position: relative;
+        }
+
+        .checkmark {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #95a5a6;
+            border-radius: 4px;
+            margin-right: 10px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .checkmark::after {
+            content: '';
+            position: absolute;
+            display: none;
+            left: 6px;
+            top: 2px;
+            width: 5px;
+            height: 10px;
+            border: solid #fff;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .event-checkbox:checked + .checkbox-label .checkmark {
+            background-color: #e74c3c;
+            border-color: #e74c3c;
+        }
+
+        .event-checkbox:checked + .checkbox-label .checkmark::after {
+            display: block;
+        }
+
+        .event-checkbox:checked + .checkbox-label .label-text {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Отладочная информация (можно удалить после тестирования)
+    console.log('Скрипт инициализирован. Найдено чекбоксов:', checkboxes.length);
+});
+
+// Вспомогательная функция для отладки
+function debugSelection() {
+    const checkboxes = document.querySelectorAll('.event-checkbox');
+    const checked = document.querySelectorAll('.event-checkbox:checked');
+    console.log('Всего чекбоксов:', checkboxes.length);
+    console.log('Выбрано чекбоксов:', checked.length);
+    console.log('Состояние isSelectAll:', isSelectAll);
+
+    // Показываем состояние каждого чекбокса
+    checkboxes.forEach((checkbox, index) => {
+        console.log(`Чекбокс ${index}:`, {
+            id: checkbox.id,
+            checked: checkbox.checked,
+            value: checkbox.value
+        });
     });
-  });
-  </script>
+}
+</script>
+
 
   <style>
   /* Стили для кнопки создания мероприятия */
@@ -1026,5 +1269,99 @@
       margin-bottom: 15px;
     }
   }
+  .filter-group {
+    display: inline-block;
+    margin-right: 20px;
+    margin-bottom: 15px;
+}
+
+.filter-group label {
+    display: block;
+    color: #ecf0f1;
+    font-weight: 600;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.filter-group input[type="number"],
+.filter-group select {
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #4a5f7a;
+    background: #1a2530;
+    color: #ecf0f1;
+    font-size: 16px;
+    width: 120px;
+    box-sizing: border-box;
+}
+
+.filter-group input[type="number"]:focus,
+.filter-group select:focus {
+    outline: none;
+    border-color: #1abc9c;
+    box-shadow: 0 0 0 2px rgba(26, 188, 156, 0.2);
+}
+
+.filter-btn {
+    padding: 10px 24px;
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    vertical-align: bottom;
+    height: 42px;
+}
+
+.filter-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+}
+
+.clear-filters {
+    margin-left: 10px;
+    padding: 10px 16px;
+    background: #95a5a6;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: inline-block;
+    vertical-align: bottom;
+    height: 42px;
+    line-height: 22px;
+}
+
+.clear-filters:hover {
+    background: #7f8c8d;
+    color: white;
+    text-decoration: none;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .filter-group {
+        display: block;
+        margin-right: 0;
+        width: 100%;
+    }
+
+    .filter-group input[type="number"],
+    .filter-group select {
+        width: 100%;
+    }
+
+    .filter-btn, .clear-filters {
+        width: 100%;
+        margin: 10px 0 5px 0;
+        text-align: center;
+    }
+}
+
   </style>
 {% endblock %}

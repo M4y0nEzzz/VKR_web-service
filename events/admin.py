@@ -3,10 +3,12 @@ from django.utils.html import format_html
 from django.utils import timezone
 from django.utils.formats import date_format
 from .models import Event
-from io import BytesIO
-import openpyxl
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Side, Font, PatternFill
 from django.http import HttpResponse
-from openpyxl.styles import Alignment
+from io import BytesIO
+from collections import defaultdict
+
 
 def _fmt_dt(dt):
     if not dt:
@@ -84,42 +86,128 @@ class EventAdmin(admin.ModelAdmin):
 
     # Экспорт в Excel
     def export_to_excel(self, request, queryset):
-        workbook = openpyxl.Workbook()
+        workbook = Workbook()
         worksheet = workbook.active
         worksheet.title = "План мероприятий"
 
+        column_widths = {
+            'A': 15,
+            'C': 40,
+            'D': 35,
+            'E': 30,
+        }
+
+        for col, width in column_widths.items():
+            worksheet.column_dimensions[col].width = width
+
+        header_font = Font(bold=True, size=12)
+        center_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        left_alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+        thin_border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+
+        current_row = 1
+
+        for _ in range(3):
+            current_row += 1
+
+        worksheet.merge_cells(f'D{current_row}:E{current_row}')
+        worksheet.cell(row=current_row, column=4, value='УТВЕРЖДАЮ').alignment = center_alignment
+        worksheet.cell(row=current_row, column=4).font = Font(bold=True)
+        current_row += 1
+
+        worksheet.merge_cells(f'D{current_row}:E{current_row}')
+        worksheet.cell(row=current_row, column=4, value='Ректор ВоГУ').alignment = center_alignment
+        current_row += 1
+
+        worksheet.merge_cells(f'D{current_row}:E{current_row}')
+        worksheet.cell(row=current_row, column=4, value='').alignment = center_alignment
+        current_row += 1
+
+        worksheet.cell(row=current_row, column=4, value='').alignment = center_alignment
+        worksheet.cell(row=current_row, column=5, value='Д. В. Дворников').alignment = center_alignment
+        current_row += 1
+
+        worksheet.cell(row=current_row, column=4, value='').alignment = center_alignment
+        worksheet.cell(row=current_row, column=5, value='2025 года').alignment = center_alignment
+        current_row += 2
+
+        worksheet.merge_cells(f'A{current_row}:E{current_row}')
+        worksheet.cell(row=current_row, column=1, value='ПЛАН МЕРОПРИЯТИЙ УНИВЕРСИТЕТА')
+        worksheet.cell(row=current_row, column=1).alignment = center_alignment
+        worksheet.cell(row=current_row, column=1).font = Font(bold=True, size=14)
+        current_row += 2
+
         headers = [
-            "№", "Название мероприятия", "Дата начала", "Дата окончания", "Категория",
-            "Подразделение", "Ответственные", "Место проведения", "Комментарий"
+            "Дата, время",
+            "Наименование мероприятия",
+            "Место проведения мероприятия",
+            "Структурное подразделение",
+            "Ответственный работник"
         ]
 
+        header_row = current_row
         for col_num, header in enumerate(headers, 1):
-            worksheet.cell(row=1, column=col_num, value=header)
+            cell = worksheet.cell(row=header_row, column=col_num, value=header)
+            cell.font = header_font
+            cell.alignment = center_alignment
+            cell.border = thin_border
+            # Серая заливка для заголовков
+            cell.fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
 
-        for col_num in range(1, len(headers) + 1):
-            worksheet.cell(row=1, column=col_num).alignment = Alignment(horizontal='center', vertical='center')
+        current_row += 1
 
-        row_num = 2  # Начнем с второй строки
-        for idx, event in enumerate(queryset, start=1):
-            responsible_names = event.responsible  # Просто берем строку
-            worksheet.cell(row=row_num, column=1, value=idx)  # Номер мероприятия
-            worksheet.cell(row=row_num, column=2, value=event.name)  # Название мероприятия
-            worksheet.cell(row=row_num, column=3,
-                           value=event.date.strftime('%d-%m-%Y %H:%M') if event.date else "")  # Дата начала
-            worksheet.cell(row=row_num, column=4,
-                           value=event.end_date.strftime('%d-%m-%Y %H:%M') if event.end_date else "")  # Дата окончания
-            worksheet.cell(row=row_num, column=5, value=event.category.name if event.category else "")  # Категория
-            worksheet.cell(row=row_num, column=6,
-                           value=event.department.name if event.department else "")  # Подразделение
-            worksheet.cell(row=row_num, column=7, value=responsible_names or "")  # Ответственные (строка)
-            worksheet.cell(row=row_num, column=8, value=event.place)  # Место проведения
-            worksheet.cell(row=row_num, column=9, value=event.comment)  # Комментарий
+        events_by_category = defaultdict(list)
 
-            row_num += 1
+        for event in queryset.order_by('category__name', 'date'):
+            if event.category:
+                events_by_category[event.category.name].append(event)
+            else:
+                events_by_category['Без категории'].append(event)
 
-        for row in worksheet.iter_rows(min_row=2, min_col=1, max_col=9, max_row=row_num - 1):
+        for category_name, events in events_by_category.items():
+            # Добавляем строку с названием категории
+            if category_name and events:
+                worksheet.merge_cells(f'A{current_row}:E{current_row}')
+                category_cell = worksheet.cell(row=current_row, column=1, value=category_name.upper())
+                category_cell.font = Font(bold=True, size=11)
+                category_cell.alignment = left_alignment
+                current_row += 1
+
+                for event in events:
+                    date_str = ""
+                    if event.date:
+                        date_str = event.date.strftime('%Y.%m.%d %H:%M')
+                        if event.end_date:
+                            date_str += f" - {event.end_date.strftime('%H:%M' if event.date.date() == event.end_date.date() else '%Y.%m.%d %H:%M')}"
+
+                    responsible_names = event.responsible or ""
+
+                    worksheet.cell(row=current_row, column=1, value=date_str).alignment = left_alignment
+                    worksheet.cell(row=current_row, column=2, value=event.name).alignment = left_alignment
+                    worksheet.cell(row=current_row, column=3, value=event.place or "").alignment = left_alignment
+                    worksheet.cell(row=current_row, column=4,
+                                   value=event.department.name if event.department else "").alignment = left_alignment
+                    worksheet.cell(row=current_row, column=5, value=responsible_names).alignment = left_alignment
+
+                    for col_num in range(1, 6):
+                        cell = worksheet.cell(row=current_row, column=col_num)
+                        cell.border = thin_border
+                        cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+
+                    current_row += 1
+
+        for row in worksheet.iter_rows(min_row=header_row, max_row=current_row - 1, max_col=5):
             for cell in row:
-                cell.alignment = Alignment(horizontal='left', vertical='center')
+                if cell.value:
+                    lines = str(cell.value).count('\n') + 1
+                    char_count = len(str(cell.value))
+                    estimated_height = min(100, max(15, lines * 15 + (char_count // 100) * 5))
+                    worksheet.row_dimensions[cell.row].height = estimated_height
 
         output = BytesIO()
         workbook.save(output)
@@ -129,7 +217,7 @@ class EventAdmin(admin.ModelAdmin):
             output.getvalue(),
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-        response['Content-Disposition'] = 'attachment; filename="plan_meropriyatiy.xlsx"'
+        response['Content-Disposition'] = 'attachment; filename="План мероприятий.xlsx"'
         return response
 
     export_to_excel.short_description = "Экспортировать в Excel"

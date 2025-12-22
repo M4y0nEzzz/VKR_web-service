@@ -10,4 +10,5 @@ urlpatterns = [
     path('delete/<int:event_id>/', views.delete_event, name='delete_event'),
     path('bulk-delete/', views.bulk_delete_events, name='bulk_delete_events'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('check-db/', views.check_database, name='check_database'),
 ]
