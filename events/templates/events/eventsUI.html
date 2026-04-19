@@ -389,7 +389,6 @@
           <button type="button" class="calendar-nav" onclick="changeMonth(1)">›</button>
         </div>
         <div class="calendar-days">
-          <!-- Дни недели -->
           <div class="day-header">Пн</div>
           <div class="day-header">Вт</div>
           <div class="day-header">Ср</div>
@@ -397,19 +396,23 @@
           <div class="day-header">Пт</div>
           <div class="day-header">Сб</div>
           <div class="day-header">Вс</div>
-          <!-- Дни месяца будут вставлены через JavaScript -->
         </div>
       </div>
     </div>
     <div class="calendar-footer">
-      <button type="button" class="btn btn-secondary" onclick="setToday()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;">
+      <button type="button" class="btn-calendar btn-calendar-secondary" onclick="setToday()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
           <polyline points="12 6 12 12 16 14"></polyline>
         </svg>
         Сегодня
       </button>
-      <button type="button" class="btn btn-secondary" onclick="setSelectedDate()">Выбрать</button>
+      <button type="button" class="btn-calendar btn-calendar-primary" onclick="setSelectedDate()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 6L9 17l-5-5"></path>
+        </svg>
+        Выбрать
+      </button>
     </div>
   </div>
 </div>
@@ -1446,58 +1449,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
-
-// Функция для форматирования дат в списке мероприятий
-function formatEventDates() {
-    const eventDates = document.querySelectorAll('.event-date');
-
-    eventDates.forEach(element => {
-        const text = element.textContent;
-
-        // Ищем паттерн дат в формате "2032-12-22T19:32 - 2032-12-22T21:32"
-        const regex = /(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})\s*[—\-]\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/g;
-        const matches = [...text.matchAll(regex)];
-
-        if (matches.length > 0) {
-            let formattedText = text;
-
-            matches.forEach(match => {
-                const [fullMatch, start, end] = match;
-
-                // Форматируем даты
-                const formattedStart = formatDateForDisplay(start);
-                const formattedEnd = formatDateForDisplay(end);
-
-                // Заменяем в тексте
-                formattedText = formattedText.replace(
-                    fullMatch,
-                    `${formattedStart} — ${formattedEnd}`
-                );
-            });
-
-            element.innerHTML = formattedText;
-        }
-    });
-}
-
-// Запускаем при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
-    formatEventDates();
-});
-
-
-
-
 </script>
-
-
-
-
-
-
-
-
-
 
 
   <style>
@@ -2969,5 +2921,181 @@ input[type="date"]:not(:placeholder-shown)::before {
 }
 
 
+/* Стили для футера календаря */
+.calendar-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #2c3e50 0%, #1a2530 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 16px 16px;
+}
+
+/* Базовый стиль кнопок календаря */
+.btn-calendar {
+  position: relative;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  letter-spacing: 0.3px;
+}
+
+/* Кнопка "Сегодня" (вторичная) */
+.btn-calendar-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ecf0f1;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.btn-calendar-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-calendar-secondary:active {
+  transform: translateY(0px);
+}
+
+/* Кнопка "Выбрать" (основная, акцентная) */
+.btn-calendar-primary {
+  background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(26, 188, 156, 0.3);
+  border: none;
+}
+
+.btn-calendar-primary:hover {
+  background: linear-gradient(135deg, #16a085 0%, #1abc9c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(26, 188, 156, 0.4);
+}
+
+.btn-calendar-primary:active {
+  transform: translateY(0px);
+  box-shadow: 0 2px 6px rgba(26, 188, 156, 0.3);
+}
+
+/* Анимация для иконок */
+.btn-calendar svg {
+  transition: all 0.2s ease;
+}
+
+.btn-calendar-secondary:hover svg {
+  transform: scale(1.1);
+  stroke: #1abc9c;
+}
+
+.btn-calendar-primary:hover svg {
+  transform: translateX(3px);
+}
+
+/* Эффект пульсации для кнопки "Выбрать" */
+.btn-calendar-primary {
+  animation: subtleGlow 2s infinite;
+}
+
+@keyframes subtleGlow {
+  0% {
+    box-shadow: 0 4px 12px rgba(26, 188, 156, 0.3);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(26, 188, 156, 0.5);
+  }
+  100% {
+    box-shadow: 0 4px 12px rgba(26, 188, 156, 0.3);
+  }
+}
+
+/* Фокус для доступности */
+.btn-calendar:focus-visible {
+  outline: 2px solid #1abc9c;
+  outline-offset: 2px;
+}
+
+/* Адаптив для мобильных */
+@media (max-width: 480px) {
+  .calendar-footer {
+    padding: 12px 16px;
+    gap: 10px;
+  }
+
+  .btn-calendar {
+    padding: 8px 18px;
+    font-size: 13px;
+  }
+}
+
+/* Синий фон для всей страницы */
+body {
+    background: linear-gradient(135deg, #1a5276 0%, #154360 100%) !important;
+    min-height: 100vh;
+}
+
+/* Чтобы карточки оставались светлыми, а фон был синим */
+.container, .main-content, .wrapper {
+    background: transparent;
+}
+
+      /* Кнопка "Отмена" */
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #bdc3c7;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ecf0f1;
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+}
+
+.btn-secondary:active {
+    transform: translateY(0);
+}
+
+/* Кнопка "Удалить" */
+.btn-danger {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(231, 76, 60, 0.4);
+}
+
+.btn-danger:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+}
   </style>
 {% endblock %}

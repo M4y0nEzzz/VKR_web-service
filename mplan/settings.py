@@ -41,7 +41,6 @@ INSTALLED_APPS = [
     'categories',
     'events',
     'users',
-    'locations',
     'mplan',
 ]
 

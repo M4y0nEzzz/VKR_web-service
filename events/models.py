@@ -18,7 +18,7 @@ class Event(models.Model):
 
     class Meta:
         db_table = 'event'
-        managed = False
+        managed = True
 
     def get_formatted_dates(self):
         """
@@ -62,13 +62,16 @@ class Event(models.Model):
         """
         Возвращает первую отформатированную дату для отображения в списке.
         """
+        if self.date:
+            if self.end_date:
+                return f"{self.date.strftime('%d.%m.%Y %H:%M')} — {self.end_date.strftime('%d.%m.%Y %H:%M')}"
+            else:
+                return f"{self.date.strftime('%d.%m.%Y %H:%M')}"
+
+        # Если нет даты в полях, проверяем комментарий
         dates = self.get_formatted_dates()
         if dates:
             return dates[0]
-
-        # Если нет дат в комментарии, используем основные поля
-        if self.date and self.end_date:
-            return f"{self.date.strftime('%d.%m.%Y %H:%M')} — {self.end_date.strftime('%d.%m.%Y %H:%M')}"
 
         return ""
 
@@ -93,4 +96,4 @@ class Event(models.Model):
             if in_dates_section and line and ("-" in line and "T" in line):
                 count += 1
 
-        return max(count, 1)  # Минимум 1 дата
+        return max(count, 1)

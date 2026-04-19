@@ -946,7 +946,7 @@ initializeDates();
 .event-form-card {
   background: linear-gradient(145deg, #2c3e50, #34495e);
   border-radius: 16px;
-  padding: 40px;
+  padding: 25px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   border: 1px solid #4a5f7a;
   position: relative;
@@ -966,13 +966,13 @@ initializeDates();
 .event-form {
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 20px;
 }
 
 .form-section {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
-  padding: 25px;
+  padding: 15px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
 }
@@ -985,12 +985,12 @@ initializeDates();
 
 .section-title {
   color: #ecf0f1;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
-  margin: 0 0 25px 0;
+  margin: 0 0 15px 0;
   display: flex;
   align-items: center;
-  padding-bottom: 15px;
+  padding-bottom: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -1001,7 +1001,7 @@ initializeDates();
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 25px;
+  gap: 15px;
 }
 
 .date-grid {
@@ -1079,12 +1079,12 @@ initializeDates();
 .event-form textarea,
 .event-form select {
   width: 100%;
-  padding: 14px 16px;
+  padding: 10px 12px;
   background: #1a2530;
   border: 2px solid #4a5f7a;
   border-radius: 10px;
   color: #ecf0f1;
-  font-size: 16px;
+  font-size: 14px;
   font-family: inherit;
   transition: all 0.3s ease;
   outline: none;
@@ -1103,7 +1103,7 @@ initializeDates();
 }
 
 .event-form textarea {
-  min-height: 120px;
+  min-height: 80px;
   resize: vertical;
   line-height: 1.5;
 }
@@ -1164,7 +1164,7 @@ initializeDates();
   display: flex;
   gap: 15px;
   justify-content: flex-end;
-  padding-top: 30px;
+  padding-top: 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   margin-top: 10px;
 }
@@ -1173,16 +1173,16 @@ initializeDates();
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 14px 28px;
+  padding: 10px 20px;
   border: none;
   border-radius: 10px;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   text-decoration: none;
   font-family: inherit;
-  min-width: 160px;
+  min-width: 130px;
 }
 
 .btn-primary {
@@ -1554,14 +1554,14 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 .dates-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
   margin-bottom: 20px;
 }
 
 .date-range-item {
   background: rgba(255, 255, 255, 0.03);
   border-radius: 10px;
-  padding: 20px;
+  padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
   position: relative;
@@ -1610,7 +1610,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 .date-range-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
+  gap: 12px;
 }
 
 .dates-actions {
@@ -1632,12 +1632,12 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 .date-start-input,
 .date-end-input {
   width: 100%;
-  padding: 14px 16px;
+  padding: 8px 12px;
   background: #1a2530;
   border: 2px solid #4a5f7a;
   border-radius: 10px;
   color: #ecf0f1;
-  font-size: 16px;
+  font-size: 14px;
   font-family: inherit;
   transition: all 0.3s ease;
   outline: none;
@@ -1657,9 +1657,141 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   display: none !important;
 }
 
+/* Синий фон для всей страницы */
+body {
+    background: linear-gradient(135deg, #1a5276 0%, #154360 100%) !important;
+    min-height: 100vh;
+}
 
+/* Чтобы карточки оставались светлыми, а фон был синим */
+.container, .main-content, .wrapper {
+    background: transparent;
+}
 
+.event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #4a5f7a;
+}
+  /* Фикс для наложения элементов */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    align-items: start;
+}
 
+.form-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* Важно! Позволяет тексту переноситься */
+}
+
+.form-label {
+    white-space: nowrap;
+}
+
+.form-label svg {
+    flex-shrink: 0;
+}
+
+.detail-value, .event-title, .form-group input, .form-group select, .form-group textarea {
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Чтобы поле "Ответственные" не разрывалось */
+.form-group input, .form-group select {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Фикс для карточек на главной */
+.event-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+}
+
+.detail-item {
+    display: flex;
+    align-items: flex-start;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.detail-content {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.detail-value {
+    word-break: break-word;
+    white-space: normal;
+}
+  /* Фикс для выезжающей правой границы */
+.event-form-card,
+.event-card,
+.event-form-container {
+    overflow-x: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.event-form {
+    width: 100%;
+    overflow-x: hidden;
+}
+
+.form-section {
+    overflow-x: hidden;
+}
+
+.event-title-section {
+    overflow-x: hidden;
+    word-break: break-word;
+    padding-right: 10px;
+}
+
+.event-title {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+
+.event-actions {
+    position: relative;
+    top: 0;
+    right: 0;
+    flex-shrink: 0;
+}
+
+.event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #4a5f7a;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+* {
+    max-width: 100%;
+    box-sizing: border-box;
+}
 
 </style>
 {% endblock %}

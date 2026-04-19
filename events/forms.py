@@ -10,3 +10,4 @@ class EventForm(forms.ModelForm):
         fields = ['name', 'date', 'end_date', 'place', 'category', 'department', 'responsible', 'comment']
 
     responsible = forms.CharField(widget=forms.TextInput(attrs={'placeholder': 'Имя ответственного, через запятую'}))
+    end_date = forms.DateTimeField(required=False, widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}))
