@@ -10,13 +10,13 @@ from openpyxl.styles import Alignment, Border, Side, Font, PatternFill
 from collections import defaultdict
 from django.shortcuts import render
 from django.core.paginator import Paginator
-from .models import Event
 from datetime import datetime as dt
 from datetime import datetime
 from django.http import JsonResponse
 from django.db.models import Q
 import json
 from django.utils import timezone
+from .models import Event, EventDate
 
 
 def event_list(request):
@@ -36,6 +36,9 @@ def create_event(request):
             else:
                 event.user = None
 
+            # Сохраняем мероприятие, чтобы получить ID
+            event.save()
+
             # Получаем JSON с датами
             dates_json = request.POST.get('dates_json', '[]')
             try:
@@ -43,7 +46,24 @@ def create_event(request):
             except:
                 dates_data = []
 
-            # Устанавливаем первую дату как основную
+            # Удаляем старые даты (если были)
+            event.event_dates.all().delete()
+
+            # Создаём новые даты в таблице EventDate
+            for d in dates_data:
+                try:
+                    start_dt = datetime.strptime(d['start'], '%Y-%m-%dT%H:%M')
+                    end_dt = datetime.strptime(d['end'], '%Y-%m-%dT%H:%M') if d.get('end') else None
+
+                    EventDate.objects.create(
+                        event=event,
+                        start=timezone.make_aware(start_dt) if start_dt else None,
+                        end=timezone.make_aware(end_dt) if end_dt else None
+                    )
+                except Exception as e:
+                    print(f"Ошибка создания даты: {e}")
+
+            # Устанавливаем первую дату как основную (для обратной совместимости)
             if dates_data:
                 first_date = dates_data[0]
                 try:
@@ -54,45 +74,23 @@ def create_event(request):
                         event.end_date = timezone.make_aware(
                             datetime.strptime(first_date['end'], '%Y-%m-%dT%H:%M')
                         )
+                    event.save()
                 except:
                     pass
 
-            # Формируем комментарий с датами
+            # Очищаем комментарий от старых дат (оставляем только чистый комментарий)
             original_comment = form.cleaned_data.get('comment', '') or ''
-
-            # Удаляем старые даты из комментария, если они были
             if "ДАТЫ:" in original_comment:
                 original_comment = original_comment.split("\n\nДАТЫ:")[0].strip()
-
-            # Формируем строку с датами
-            dates_string = ""
-            if dates_data:
-                dates_lines = ["ДАТЫ:"]
-                for d in dates_data:
-                    start = d.get('start', '')
-                    end = d.get('end', '')
-                    if start and end:
-                        dates_lines.append(f"{start} - {end}")
-                    elif start:
-                        dates_lines.append(start)
-
-                if len(dates_lines) > 1:
-                    dates_string = "\n\n" + "\n".join(dates_lines)
-
-            # Объединяем
-            if original_comment and dates_string:
-                event.comment = original_comment + dates_string
-            elif dates_string:
-                event.comment = dates_string
-            else:
-                event.comment = original_comment
-
+            event.comment = original_comment
             event.save()
+
             return redirect('events_ui')
     else:
         form = EventForm()
+        event_dates_json = '[]'
 
-    return render(request, 'events/create_event.html', {'form': form})
+    return render(request, 'events/create_event.html', {'form': form, 'event_dates_json': event_dates_json})
 
 
 def delete_event(request, event_id):
@@ -103,6 +101,15 @@ def delete_event(request, event_id):
 
 def edit_event(request, event_id):
     event = get_object_or_404(Event, id=event_id)
+
+    # Формируем JSON для множественных дат
+    event_dates = []
+    for ed in event.event_dates.all():
+        event_dates.append({
+            'start': ed.start.strftime('%Y-%m-%dT%H:%M'),
+            'end': ed.end.strftime('%Y-%m-%dT%H:%M') if ed.end else ''
+        })
+    event_dates_json = json.dumps(event_dates)
 
     if request.method == 'POST':
         form = EventForm(request.POST, instance=event)
@@ -116,7 +123,24 @@ def edit_event(request, event_id):
             except:
                 dates_data = []
 
-            # Устанавливаем первую дату как основную
+            # Удаляем старые даты
+            event.event_dates.all().delete()
+
+            # Создаём новые даты в таблице EventDate
+            for d in dates_data:
+                try:
+                    start_dt = datetime.strptime(d['start'], '%Y-%m-%dT%H:%M')
+                    end_dt = datetime.strptime(d['end'], '%Y-%m-%dT%H:%M') if d.get('end') else None
+
+                    EventDate.objects.create(
+                        event=event,
+                        start=timezone.make_aware(start_dt) if start_dt else None,
+                        end=timezone.make_aware(end_dt) if end_dt else None
+                    )
+                except Exception as e:
+                    print(f"Ошибка создания даты: {e}")
+
+            # Устанавливаем первую дату как основную (для обратной совместимости)
             if dates_data:
                 first_date = dates_data[0]
                 try:
@@ -130,42 +154,18 @@ def edit_event(request, event_id):
                 except:
                     pass
 
-            # Формируем комментарий с датами
+            # Очищаем комментарий от старых дат
             original_comment = form.cleaned_data.get('comment', '') or ''
-
-            # Удаляем старые даты из комментария
             if "ДАТЫ:" in original_comment:
                 original_comment = original_comment.split("\n\nДАТЫ:")[0].strip()
-
-            # Формируем строку с датами
-            dates_string = ""
-            if dates_data:
-                dates_lines = ["ДАТЫ:"]
-                for d in dates_data:
-                    start = d.get('start', '')
-                    end = d.get('end', '')
-                    if start and end:
-                        dates_lines.append(f"{start} - {end}")
-                    elif start:
-                        dates_lines.append(start)
-
-                if len(dates_lines) > 1:
-                    dates_string = "\n\n" + "\n".join(dates_lines)
-
-            # Объединяем
-            if original_comment and dates_string:
-                event.comment = original_comment + dates_string
-            elif dates_string:
-                event.comment = dates_string
-            else:
-                event.comment = original_comment
-
+            event.comment = original_comment
             event.save()
+
             return redirect('events_ui')
     else:
         form = EventForm(instance=event)
 
-    return render(request, 'events/edit_event.html', {'form': form, 'event': event})
+    return render(request, 'events/edit_event.html', {'form': form, 'event': event, 'event_dates_json': event_dates_json})
 
 
 def export_events_to_excel(request):
@@ -240,8 +240,9 @@ def events_ui(request):
     search_query = request.GET.get('search', '')
     start_date_str = request.GET.get('start_date', '')
     end_date_str = request.GET.get('end_date', '')
+    responsible_query = request.GET.get('responsible', '')
 
-    events = Event.objects.all().select_related('category', 'department')
+    events = Event.objects.all().select_related('category', 'department').prefetch_related('event_dates')
 
     if category_id and category_id != '':
         try:
@@ -256,6 +257,9 @@ def events_ui(request):
             events = events.filter(department_id=department_int)
         except ValueError:
             pass
+
+    if responsible_query:
+        events = events.filter(responsible__icontains=responsible_query)
 
     if start_date_str or end_date_str:
         if start_date_str:
@@ -288,12 +292,12 @@ def events_ui(request):
         search_q = Q()
         for term in search_terms:
             search_q |= (
-                Q(name__contains=term) |
-                Q(place__contains=term) |
-                Q(comment__contains=term) |
-                Q(responsible__contains=term) |
-                Q(category__name__contains=term) |
-                Q(department__name__contains=term)
+                Q(name__icontains=term) |
+                Q(place__icontains=term) |
+                Q(comment__icontains=term) |
+                Q(responsible__icontains=term) |
+                Q(category__name__icontains=term) |
+                Q(department__name__icontains=term)
             )
         events = events.filter(search_q)
 

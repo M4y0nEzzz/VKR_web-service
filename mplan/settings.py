@@ -81,10 +81,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'mplan',
-        'USER': 'django_user',
+        'USER': 'root',
         'PASSWORD': '2g8bnEV7Cq',
         'HOST': 'localhost',
-        'PORT': '3306',
+        'PORT': '3305',
     }
 }
 

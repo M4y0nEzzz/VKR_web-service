@@ -5,6 +5,7 @@ from categories.models import Category
 from departments.models import Department
 from users.models import User
 
+
 class Event(models.Model):
     name = models.TextField(null=True, blank=True)
     date = models.DateTimeField(null=True, blank=True)
@@ -18,82 +19,59 @@ class Event(models.Model):
 
     class Meta:
         db_table = 'event'
-        managed = True
+        managed = False
 
     def get_formatted_dates(self):
-        """
-        Возвращает список отформатированных дат из комментария.
-        Формат: ['22.12.2032 19:32 — 22.12.2032 21:32', ...]
-        """
-        if not self.comment or "ДАТЫ:" not in self.comment:
-            return []
+        """Возвращает список всех отформатированных дат из EventDate"""
+        dates = []
+        for ed in self.event_dates.all().order_by('start'):
+            if ed.end:
+                dates.append(f"{ed.start.strftime('%d.%m.%Y %H:%M')} — {ed.end.strftime('%d.%m.%Y %H:%M')}")
+            else:
+                dates.append(ed.start.strftime('%d.%m.%Y %H:%M'))
 
-        formatted_dates = []
-        lines = self.comment.split('\n')
-        in_dates_section = False
-
-        for line in lines:
-            line = line.strip()
-            if line == "ДАТЫ:":
-                in_dates_section = True
-                continue
-
-            if in_dates_section and line and ("-" in line and "T" in line):
-                # Парсим строку вида "2032-12-22T19:32 - 2032-12-22T21:32"
-                parts = line.split(' - ')
-                if len(parts) == 2:
-                    start_str, end_str = parts
-
-                    try:
-                        # Преобразуем в читаемый формат
-                        start_dt = datetime.strptime(start_str.strip(), '%Y-%m-%dT%H:%M')
-                        end_dt = datetime.strptime(end_str.strip(), '%Y-%m-%dT%H:%M')
-
-                        formatted_start = start_dt.strftime('%d.%m.%Y %H:%M')
-                        formatted_end = end_dt.strftime('%d.%m.%Y %H:%M')
-
-                        formatted_dates.append(f"{formatted_start} — {formatted_end}")
-                    except ValueError:
-                        continue
-
-        return formatted_dates
+        # Если нет дат в EventDate, пробуем из полей date/end_date
+        if not dates and self.date:
+            if self.end_date:
+                dates.append(f"{self.date.strftime('%d.%m.%Y %H:%M')} — {self.end_date.strftime('%d.%m.%Y %H:%M')}")
+            else:
+                dates.append(self.date.strftime('%d.%m.%Y %H:%M'))
+        return dates
 
     def get_first_formatted_date(self):
-        """
-        Возвращает первую отформатированную дату для отображения в списке.
-        """
+        """Возвращает первую отформатированную дату"""
+        first = self.event_dates.order_by('start').first()
+        if first:
+            if first.end:
+                return f"{first.start.strftime('%d.%m.%Y %H:%M')} — {first.end.strftime('%d.%m.%Y %H:%M')}"
+            return first.start.strftime('%d.%m.%Y %H:%M')
+
+        # fallback на старые поля date/end_date
         if self.date:
             if self.end_date:
                 return f"{self.date.strftime('%d.%m.%Y %H:%M')} — {self.end_date.strftime('%d.%m.%Y %H:%M')}"
-            else:
-                return f"{self.date.strftime('%d.%m.%Y %H:%M')}"
-
-        # Если нет даты в полях, проверяем комментарий
-        dates = self.get_formatted_dates()
-        if dates:
-            return dates[0]
-
+            return self.date.strftime('%d.%m.%Y %H:%M')
         return ""
 
     @property
     def dates_count(self):
-        """
-        Возвращает количество дат в комментарии.
-        """
-        if not self.comment or "ДАТЫ:" not in self.comment:
-            return 1  # Основная дата
+        """Возвращает количество дат"""
+        count = self.event_dates.count()
+        if count == 0 and self.date:
+            return 1
+        return count
 
-        count = 0
-        lines = self.comment.split('\n')
-        in_dates_section = False
 
-        for line in lines:
-            line = line.strip()
-            if line == "ДАТЫ:":
-                in_dates_section = True
-                continue
+class EventDate(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='event_dates')
+    start = models.DateTimeField(verbose_name='Дата и время начала')
+    end = models.DateTimeField(verbose_name='Дата и время окончания', null=True, blank=True)
 
-            if in_dates_section and line and ("-" in line and "T" in line):
-                count += 1
+    class Meta:
+        db_table = 'event_date'
+        ordering = ['start']
+        verbose_name = 'Дата мероприятия'
+        verbose_name_plural = 'Даты мероприятий'
 
-        return max(count, 1)
+    def __str__(self):
+        return f"{self.start} - {self.end}" if self.end else str(self.start)

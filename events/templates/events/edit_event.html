@@ -278,10 +278,12 @@
 
 
 <script>
-// Передаём даты из БД в JavaScript
+// Передаём даты из БД в JavaScript (из новой таблицы EventDate)
+const eventDatesJson = {{ event_dates_json|safe }};
 const eventDate = "{{ event.date|date:'Y-m-d\\TH:i'|default:'' }}";
 const eventEndDate = "{{ event.end_date|date:'Y-m-d\\TH:i'|default:'' }}";
 
+console.log('eventDates from DB:', eventDatesJson);
 console.log('eventDate from DB:', eventDate);
 console.log('eventEndDate from DB:', eventEndDate);
 
@@ -445,8 +447,6 @@ function setSelectedDateTime() {
 // Управление множественными датами
 let dateRanges = [];
 
-
-
 document.addEventListener('DOMContentLoaded', function() {
   initializeDates();
   updateCalendar();
@@ -458,59 +458,45 @@ function initializeDates() {
 
     datesContainer.innerHTML = '';
 
-    // Пытаемся извлечь даты из комментария
-    const commentField = document.getElementById('id_comment');
     let extractedDates = [];
 
-    if (commentField && commentField.value) {
-        const comment = commentField.value;
-        const dateSectionIndex = comment.indexOf('ДАТЫ:');
-
-        if (dateSectionIndex !== -1) {
-            const dateLines = comment.substring(dateSectionIndex).split('\n');
-
-            for (const line of dateLines) {
-                const trimmed = line.trim();
-                if (!trimmed || trimmed === 'ДАТЫ:') continue;
-
-                // Парсим строку вида "2032-12-22T19:32 - 2032-12-22T21:32"
-                const match = trimmed.match(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})\s*[—\-]\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
-                if (match) {
-                    extractedDates.push({
-                        start: match[1],
-                        end: match[2],
-                        id: generateId()
-                    });
-                }
-            }
+    // Загружаем даты из eventDatesJson (передаётся из views.py)
+    if (eventDatesJson && eventDatesJson.length > 0) {
+        for (const d of eventDatesJson) {
+            extractedDates.push({
+                start: d.start,
+                end: d.end || '',
+                id: generateId()
+            });
         }
     }
 
-    if (extractedDates.length > 0) {
-        dateRanges = extractedDates;
-    } else {
-        // Если нет дат в комментарии, берём из полей формы
+    // Если нет дат в eventDatesJson, пробуем из полей date/end_date
+    if (extractedDates.length === 0) {
         const startField = document.getElementById('id_date');
         const endField = document.getElementById('id_end_date');
 
         if (startField && startField.value) {
-            dateRanges = [{
+            extractedDates = [{
                 start: startField.value,
                 end: endField && endField.value ? endField.value : '',
-                id: generateId()
-            }];
-        } else {
-            // Создаём новую дату
-            const now = new Date();
-            const startTime = new Date(now.getTime() + 60 * 60 * 1000);
-            dateRanges = [{
-                start: formatDateTime(startTime),
-                end: '',
                 id: generateId()
             }];
         }
     }
 
+    // Если всё равно нет дат, создаём одну пустую
+    if (extractedDates.length === 0) {
+        const now = new Date();
+        const startTime = new Date(now.getTime() + 60 * 60 * 1000);
+        extractedDates = [{
+            start: formatDateTime(startTime),
+            end: '',
+            id: generateId()
+        }];
+    }
+
+    dateRanges = extractedDates;
     renderAllDates();
     updateDatesCount();
     saveDatesToJson();
@@ -748,11 +734,11 @@ updateCalendar();
   align-items: center;
   margin-bottom: 30px;
   padding-bottom: 20px;
-  border-bottom: 2px solid #4a5f7a;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.1);
 }
 
 .page-title {
-  color: #ecf0f1;
+  color: #1a5276;
   font-size: 28px;
   font-weight: 700;
   margin: 0;
@@ -774,7 +760,7 @@ updateCalendar();
 }
 
 .id-label {
-  color: #95a5a6;
+  color: #7f8c8d;
   font-size: 14px;
   font-weight: 600;
   margin-right: 8px;
@@ -790,11 +776,11 @@ updateCalendar();
 }
 
 .event-form-card {
-  background: linear-gradient(145deg, #2c3e50, #34495e);
+  background: white;
   border-radius: 16px;
   padding: 25px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  border: 1px solid #4a5f7a;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   position: relative;
   overflow: hidden;
 }
@@ -816,28 +802,28 @@ updateCalendar();
 }
 
 .form-section {
-  background: rgba(255, 255, 255, 0.05);
+  background: #f8fafd;
   border-radius: 12px;
   padding: 15px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
 }
 
 .form-section:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: #f0f3f8;
   border-color: rgba(26, 188, 156, 0.3);
   transform: translateY(-2px);
 }
 
 .section-title {
-  color: #ecf0f1;
+  color: #1a5276;
   font-size: 18px;
   font-weight: 600;
   margin: 0 0 15px 0;
   display: flex;
   align-items: center;
   padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .section-title svg {
@@ -864,7 +850,7 @@ updateCalendar();
 }
 
 .form-label {
-  color: #ecf0f1;
+  color: #2c3e50;
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 8px;
@@ -894,9 +880,8 @@ updateCalendar();
   top: 50%;
   transform: translateY(-50%);
   background: rgba(26, 188, 156, 0.1);
-  border: 2px solid #4a5f7a;
+  border: 1px solid rgba(26, 188, 156, 0.3);
   border-radius: 8px;
-  color: #ecf0f1;
   padding: 8px 12px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -926,14 +911,15 @@ updateCalendar();
 .event-form select {
   width: 100%;
   padding: 10px 12px;
-  background: #1a2530;
-  border: 2px solid #4a5f7a;
+  background: white;
+  border: 1px solid #dce4ec;
   border-radius: 10px;
-  color: #ecf0f1;
+  color: #2c3e50;
   font-size: 14px;
   font-family: inherit;
   transition: all 0.3s ease;
   outline: none;
+  box-sizing: border-box;
 }
 
 .event-form input[type="text"]:focus,
@@ -945,7 +931,7 @@ updateCalendar();
 .event-form select:focus {
   border-color: #1abc9c;
   box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.2);
-  background: #1f2b38;
+  background: white;
 }
 
 .event-form textarea {
@@ -956,14 +942,13 @@ updateCalendar();
 
 .event-form select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2395a5a6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2390a4ae' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 16px center;
   background-size: 16px;
   padding-right: 45px;
 }
 
-/* Множественный выбор */
 .event-form select[multiple] {
   background-image: none;
   padding-right: 16px;
@@ -974,12 +959,12 @@ updateCalendar();
 .event-form select[multiple] option {
   padding: 8px 12px;
   margin: 2px 0;
-  background: #2c3e50;
+  background: white;
   border-radius: 4px;
 }
 
 .event-form select[multiple] option:hover {
-  background: #3498db;
+  background: rgba(26, 188, 156, 0.1);
 }
 
 .event-form select[multiple] option:checked {
@@ -1011,7 +996,7 @@ updateCalendar();
   gap: 15px;
   justify-content: flex-end;
   padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
   margin-top: 10px;
 }
 
@@ -1042,13 +1027,14 @@ updateCalendar();
 }
 
 .btn-secondary {
-  background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
-  color: white;
+  background: #e8ecf1;
+  color: #5a6e7a;
 }
 
 .btn-secondary:hover {
+  background: #dce4ec;
   transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(149, 165, 166, 0.4);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
 }
 
 .btn-danger {
@@ -1070,19 +1056,19 @@ updateCalendar();
   top: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.5);
   animation: fadeIn 0.3s ease-out;
 }
 
 .calendar-content {
-  background: linear-gradient(145deg, #2c3e50, #34495e);
+  background: white;
   margin: 10% auto;
   padding: 0;
   border-radius: 16px;
   width: 90%;
   max-width: 500px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-  border: 1px solid #4a5f7a;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
@@ -1128,22 +1114,22 @@ updateCalendar();
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
-  background: rgba(255, 255, 255, 0.05);
+  background: #f8fafd;
   padding: 10px;
   border-radius: 10px;
 }
 
 .calendar-month-year span {
-  color: #ecf0f1;
+  color: #2c3e50;
   font-size: 18px;
   font-weight: 600;
 }
 
 .calendar-nav {
   background: rgba(26, 188, 156, 0.1);
-  border: 2px solid #4a5f7a;
+  border: 1px solid rgba(26, 188, 156, 0.3);
   border-radius: 8px;
-  color: #ecf0f1;
+  color: #1abc9c;
   width: 40px;
   height: 40px;
   display: flex;
@@ -1168,7 +1154,7 @@ updateCalendar();
 }
 
 .day-header {
-  color: #95a5a6;
+  color: #90a4ae;
   font-weight: 600;
   font-size: 14px;
   text-align: center;
@@ -1177,19 +1163,19 @@ updateCalendar();
 }
 
 .calendar-day {
-  color: #ecf0f1;
+  color: #2c3e50;
   text-align: center;
   padding: 12px 0;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 500;
-  border: 2px solid transparent;
+  border: 1px solid transparent;
 }
 
 .calendar-day:hover {
   background: rgba(26, 188, 156, 0.1);
-  border-color: #4a5f7a;
+  border-color: #1abc9c;
   transform: scale(1.05);
 }
 
@@ -1201,16 +1187,16 @@ updateCalendar();
 }
 
 .calendar-day.today {
-  border: 2px solid #3498db;
+  border: 1px solid #3498db;
 }
 
 .calendar-day.other-month {
-  color: #7f8c8d;
-  opacity: 0.5;
+  color: #b0bec5;
+  opacity: 0.6;
 }
 
 .calendar-time {
-  background: rgba(255, 255, 255, 0.05);
+  background: #f8fafd;
   padding: 20px;
   border-radius: 10px;
   margin-top: 20px;
@@ -1224,7 +1210,7 @@ updateCalendar();
 }
 
 .time-selector label {
-  color: #ecf0f1;
+  color: #2c3e50;
   font-weight: 600;
   font-size: 16px;
 }
@@ -1238,10 +1224,10 @@ updateCalendar();
 .time-inputs input {
   width: 60px;
   padding: 10px;
-  background: #1a2530;
-  border: 2px solid #4a5f7a;
+  background: white;
+  border: 1px solid #dce4ec;
   border-radius: 8px;
-  color: #ecf0f1;
+  color: #2c3e50;
   font-size: 16px;
   text-align: center;
   transition: all 0.3s ease;
@@ -1250,10 +1236,11 @@ updateCalendar();
 .time-inputs input:focus {
   border-color: #1abc9c;
   box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.2);
+  outline: none;
 }
 
 .time-inputs span {
-  color: #ecf0f1;
+  color: #2c3e50;
   font-size: 18px;
   font-weight: bold;
 }
@@ -1262,8 +1249,8 @@ updateCalendar();
   padding: 20px;
   display: flex;
   justify-content: space-between;
-  border-top: 1px solid #4a5f7a;
-  background: rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  background: #f8fafd;
 }
 
 /* Анимации */
@@ -1291,10 +1278,9 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
 
-/* Подсказка для полей даты */
 .datetime-container input[type="datetime-local"]::before {
   content: 'дд.мм.гггг чч:мм';
-  color: #95a5a6;
+  color: #b0bec5;
   position: absolute;
   left: 16px;
   top: 50%;
@@ -1305,6 +1291,259 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 .datetime-container input[type="datetime-local"]:focus::before,
 .datetime-container input[type="datetime-local"]:not(:placeholder-shown)::before {
   display: none;
+}
+
+/* Стили для множественных дат */
+.dates-count-badge {
+  background: rgba(26, 188, 156, 0.15);
+  color: #1abc9c;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  margin-left: 10px;
+  border: 1px solid rgba(26, 188, 156, 0.3);
+}
+
+.dates-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.date-range-item {
+  background: white;
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.date-range-item:hover {
+  background: #f8fafd;
+  border-color: rgba(26, 188, 156, 0.3);
+}
+
+.date-range-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.date-range-header h4 {
+  margin: 0;
+  color: #1a5276;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.remove-date-btn {
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  border-radius: 6px;
+  color: #e74c3c;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-date-btn:hover {
+  background: rgba(231, 76, 60, 0.2);
+  border-color: #e74c3c;
+  transform: scale(1.05);
+}
+
+.date-range-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.dates-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.dates-actions .btn {
+  min-width: auto;
+  padding: 10px 16px;
+}
+
+.dates-actions .btn svg {
+  margin-right: 6px;
+}
+
+.date-start-input,
+.date-end-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid #dce4ec;
+  border-radius: 10px;
+  color: #2c3e50;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.3s ease;
+  outline: none;
+  padding-right: 50px;
+  box-sizing: border-box;
+}
+
+.date-start-input:focus,
+.date-end-input:focus {
+  border-color: #1abc9c;
+  box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.2);
+  background: white;
+}
+
+/* Скрываем оригинальные поля дат */
+#id_date,
+#id_end_date {
+  display: none !important;
+}
+
+/* Синий фон для всей страницы */
+body {
+  background: linear-gradient(135deg, #e8f0fe 0%, #d4e4f7 100%) !important;
+  min-height: 100vh;
+}
+
+.container, .main-content, .wrapper {
+  background: transparent;
+}
+
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Фикс для наложения элементов */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+  align-items: start;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.form-label {
+  white-space: nowrap;
+}
+
+.form-label svg {
+  flex-shrink: 0;
+}
+
+.detail-value, .event-title, .form-group input, .form-group select, .form-group textarea {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.form-group input, .form-group select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.event-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.detail-content {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.detail-value {
+  word-break: break-word;
+  white-space: normal;
+}
+
+.event-form-card,
+.event-card,
+.event-form-container {
+  overflow-x: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.event-form {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.form-section {
+  overflow-x: hidden;
+}
+
+.event-title-section {
+  overflow-x: hidden;
+  word-break: break-word;
+  padding-right: 10px;
+}
+
+.event-title {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+.event-actions {
+  position: relative;
+  top: 0;
+  right: 0;
+  flex-shrink: 0;
+}
+
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+* {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Адаптивность */
@@ -1385,263 +1624,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     padding: 8px;
   }
 }
-/* Стили для множественных дат */
-.dates-count-badge {
-  background: rgba(26, 188, 156, 0.2);
-  color: #1abc9c;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 12px;
-  margin-left: 10px;
-  border: 1px solid rgba(26, 188, 156, 0.3);
-}
-
-.dates-container {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.date-range-item {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 10px;
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.date-range-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(26, 188, 156, 0.2);
-}
-
-.date-range-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.date-range-header h4 {
-  margin: 0;
-  color: #ecf0f1;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.remove-date-btn {
-  background: rgba(231, 76, 60, 0.1);
-  border: 1px solid rgba(231, 76, 60, 0.3);
-  border-radius: 6px;
-  color: #e74c3c;
-  padding: 6px 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.remove-date-btn:hover {
-  background: rgba(231, 76, 60, 0.2);
-  border-color: #e74c3c;
-  transform: scale(1.05);
-}
-
-.date-range-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 12px;
-}
-
-.dates-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.dates-actions .btn {
-  min-width: auto;
-  padding: 10px 16px;
-}
-
-.dates-actions .btn svg {
-  margin-right: 6px;
-}
-
-/* Стили для динамических полей ввода даты */
-.date-start-input,
-.date-end-input {
-  width: 100%;
-  padding: 8px 12px;
-  background: #1a2530;
-  border: 2px solid #4a5f7a;
-  border-radius: 10px;
-  color: #ecf0f1;
-  font-size: 14px;
-  font-family: inherit;
-  transition: all 0.3s ease;
-  outline: none;
-  padding-right: 50px;
-}
-
-.date-start-input:focus,
-.date-end-input:focus {
-  border-color: #1abc9c;
-  box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.2);
-  background: #1f2b38;
-}
-
-/* Скрываем оригинальные поля дат */
-#id_date,
-#id_end_date {
-  display: none !important;
-}
-
-/* Синий фон для всей страницы */
-body {
-    background: linear-gradient(135deg, #1a5276 0%, #154360 100%) !important;
-    min-height: 100vh;
-}
-
-/* Чтобы карточки оставались светлыми, а фон был синим */
-.container, .main-content, .wrapper {
-    background: transparent;
-}
-
-.event-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #4a5f7a;
-}
-  /* Фикс для наложения элементов */
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 15px;
-    align-items: start;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    min-width: 0; /* Важно! Позволяет тексту переноситься */
-}
-
-.form-label {
-    white-space: nowrap;
-}
-
-.form-label svg {
-    flex-shrink: 0;
-}
-
-.detail-value, .event-title, .form-group input, .form-group select, .form-group textarea {
-    word-break: break-word;
-    overflow-wrap: break-word;
-}
-
-/* Чтобы поле "Ответственные" не разрывалось */
-.form-group input, .form-group select {
-    width: 100%;
-    box-sizing: border-box;
-}
-
-/* Фикс для карточек на главной */
-.event-details-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 12px;
-}
-
-.detail-item {
-    display: flex;
-    align-items: flex-start;
-    min-width: 0;
-    overflow: hidden;
-}
-
-.detail-content {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-}
-
-.detail-value {
-    word-break: break-word;
-    white-space: normal;
-}
-  /* Фикс для выезжающей правой границы */
-.event-form-card,
-.event-card,
-.event-form-container {
-    overflow-x: hidden;
-    max-width: 100%;
-    box-sizing: border-box;
-}
-
-.event-form {
-    width: 100%;
-    overflow-x: hidden;
-}
-
-.form-section {
-    overflow-x: hidden;
-}
-
-.event-title-section {
-    overflow-x: hidden;
-    word-break: break-word;
-    padding-right: 10px;
-}
-
-.event-title {
-    word-break: break-word;
-    overflow-wrap: break-word;
-    white-space: normal;
-}
-
-.event-actions {
-    position: relative;
-    top: 0;
-    right: 0;
-    flex-shrink: 0;
-}
-
-.event-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #4a5f7a;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-    max-width: 100%;
-    box-sizing: border-box;
-}
-
-* {
-    max-width: 100%;
-    box-sizing: border-box;
-}
-
 </style>
-
-
 
 
 
